@@ -8,7 +8,8 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
-import { GAME_ADDRESS, TOKENS } from "@/lib/constants";
+import { GAME_ADDRESS } from "@/lib/constants";
+import { getTokenSymbol } from "@/lib/utils";
 
 const REVEAL_WINDOW = 200n;
 
@@ -23,8 +24,10 @@ type Room = {
 
 type Result = {
   kind: "win" | "tie" | "expired";
-  rollA?: number;
-  rollB?: number;
+  rollA1?: number;
+  rollA2?: number;
+  rollB1?: number;
+  rollB2?: number;
   winner?: `0x${string}`;
   payout?: bigint;
 };
@@ -90,20 +93,22 @@ export default function GamePage() {
             const args = decoded.args as {
               roomId: bigint;
               winner: `0x${string}`;
-              rollA: number;
-              rollB: number;
+              rollA1: number;
+              rollA2: number;
+              rollB1: number;
+              rollB2: number;
               payout: bigint;
               fee: bigint;
             };
-            setResult({ kind: "win", rollA: args.rollA, rollB: args.rollB, winner: args.winner, payout: args.payout });
+            setResult({ kind: "win", rollA1: args.rollA1, rollA2: args.rollA2, rollB1: args.rollB1, rollB2: args.rollB2, winner: args.winner, payout: args.payout });
             return;
           }
           if (
             decoded.eventName === "RoomTied" &&
             (decoded.args as { roomId: bigint }).roomId === roomId
           ) {
-            const args = decoded.args as { roomId: bigint; rollA: number; rollB: number };
-            setResult({ kind: "tie", rollA: args.rollA, rollB: args.rollB });
+            const args = decoded.args as { roomId: bigint; rollA1: number; rollA2: number; rollB1: number; rollB2: number };
+            setResult({ kind: "tie", rollA1: args.rollA1, rollA2: args.rollA2, rollB1: args.rollB1, rollB2: args.rollB2 });
             return;
           }
           if (
@@ -157,10 +162,7 @@ export default function GamePage() {
     }
   }, [room?.state]);
 
-  const tokenSymbol =
-    room?.token.toLowerCase() === TOKENS.cUSD.toLowerCase() ? "cUSD" :
-    room?.token.toLowerCase() === TOKENS.USDT.toLowerCase() ? "USDT" :
-    "";
+  const tokenSymbol = room ? getTokenSymbol(room.token) : "";
 
   const isPlayerA = address && room && address.toLowerCase() === room.playerA.toLowerCase();
   const isPlayerB = address && room && address.toLowerCase() === room.playerB.toLowerCase();
@@ -241,11 +243,27 @@ export default function GamePage() {
         <div className="w-10" />
       </header>
 
-      {/* Dice display */}
-      <section className="flex items-center justify-center gap-6 py-8">
-        <DieBox value={result?.rollA} label="Host" />
+      {/* Dice display — 2 dice per player */}
+      <section className="flex items-center justify-center gap-4 py-8">
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex gap-2">
+            <DieBox value={result?.rollA1} />
+            <DieBox value={result?.rollA2} />
+          </div>
+          <span className="text-xs uppercase tracking-wider text-white/50">
+            Host {result ? `(${(result.rollA1 ?? 0) + (result.rollA2 ?? 0)})` : ""}
+          </span>
+        </div>
         <div className="text-2xl text-white/40">vs</div>
-        <DieBox value={result?.rollB} label="Guest" />
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex gap-2">
+            <DieBox value={result?.rollB1} />
+            <DieBox value={result?.rollB2} />
+          </div>
+          <span className="text-xs uppercase tracking-wider text-white/50">
+            Guest {result ? `(${(result.rollB1 ?? 0) + (result.rollB2 ?? 0)})` : ""}
+          </span>
+        </div>
       </section>
 
       {/* Outcome */}
@@ -338,13 +356,10 @@ export default function GamePage() {
   );
 }
 
-function DieBox({ value, label }: { value?: number; label: string }) {
+function DieBox({ value }: { value?: number }) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-4xl font-bold font-mono">
-        {value ?? "?"}
-      </div>
-      <div className="text-xs uppercase tracking-wider text-white/50">{label}</div>
+    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-3xl font-bold font-mono">
+      {value ?? "?"}
     </div>
   );
 }
