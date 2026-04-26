@@ -10,6 +10,8 @@ import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
 import { GAME_ADDRESS, TOKENS } from "@/lib/constants";
 
+const REVEAL_WINDOW = 200n;
+
 type Room = {
   playerA: `0x${string}`;
   playerB: `0x${string}`;
@@ -35,6 +37,7 @@ export default function GamePage() {
 
   const [room, setRoom] = useState<Room | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +63,14 @@ export default function GamePage() {
     };
     setRoom(updated);
 
+    // Always track current block (needed for reveal window countdown)
+    const latest = await publicClient.getBlockNumber();
+    setCurrentBlock(latest);
+
     // Fetch result events for Resolved (3) or Expired (4)
     if (r[6] === 3 || r[6] === 4) {
       const roomId = BigInt(params.roomId);
-      // Search from matchedAtBlock for precision
       const fromBlock = r[4] > 0n ? r[4] : 0n;
-      const latest = await publicClient.getBlockNumber();
       const logs = await publicClient.getLogs({
         address: GAME_ADDRESS,
         fromBlock,
@@ -160,6 +165,12 @@ export default function GamePage() {
   const isPlayerA = address && room && address.toLowerCase() === room.playerA.toLowerCase();
   const isPlayerB = address && room && address.toLowerCase() === room.playerB.toLowerCase();
 
+  // How many blocks until the claim window opens (negative = already expired)
+  const blocksUntilExpiry = room
+    ? Number(room.matchedAtBlock + REVEAL_WINDOW - currentBlock)
+    : null;
+  const canClaim = blocksUntilExpiry !== null && blocksUntilExpiry <= 0;
+
   async function onReveal() {
     if (!room || !publicClient) return;
     const secret = loadSecret(params.roomId);
@@ -243,9 +254,7 @@ export default function GamePage() {
           {result.kind === "tie" && (
             <>
               <p className="text-lg font-bold text-yellow-400">It's a tie!</p>
-              <p className="mt-1 text-xs text-white/60">
-                Both players refunded their stake.
-              </p>
+              <p className="mt-1 text-xs text-white/60">Both players refunded their stake.</p>
             </>
           )}
           {result.kind === "win" && youWon && (
@@ -273,14 +282,7 @@ export default function GamePage() {
         </section>
       )}
 
-      {/* Waiting indicator for Player B */}
-      {room.state === 2 && !result && isPlayerB && (
-        <p className="text-center text-sm text-white/50 animate-pulse">
-          Waiting for host to reveal…
-        </p>
-      )}
-
-      {/* Actions */}
+      {/* Actions while Matched */}
       {room.state === 2 && (
         <section className="flex flex-col gap-3">
           {isPlayerA && (
@@ -293,14 +295,26 @@ export default function GamePage() {
               {busy ? "Rolling…" : "Reveal and roll"}
             </button>
           )}
-          {isPlayerB && (
+
+          {isPlayerB && !canClaim && (
+            <div className="flex flex-col items-center gap-1 py-3 text-center">
+              <p className="text-sm text-white/50 animate-pulse">Waiting for host to reveal…</p>
+              {blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
+                <p className="text-xs text-white/30">
+                  Claim window opens in ~{blocksUntilExpiry} blocks (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min)
+                </p>
+              )}
+            </div>
+          )}
+
+          {isPlayerB && canClaim && (
             <button
               type="button"
               disabled={busy}
               onClick={onClaimExpired}
               className="rounded-xl border border-white/15 py-3 text-xs text-white/70 active:opacity-70 disabled:opacity-40"
             >
-              Claim expired (after ~200 blocks)
+              {busy ? "Claiming…" : "Claim expired — host didn't reveal"}
             </button>
           )}
         </section>
