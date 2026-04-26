@@ -513,13 +513,25 @@ export const DICE_BATTLE_ABI = [
         "internalType": "address"
       },
       {
-        "name": "rollA",
+        "name": "rollA1",
         "type": "uint8",
         "indexed": false,
         "internalType": "uint8"
       },
       {
-        "name": "rollB",
+        "name": "rollA2",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "rollB1",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "rollB2",
         "type": "uint8",
         "indexed": false,
         "internalType": "uint8"
@@ -550,13 +562,25 @@ export const DICE_BATTLE_ABI = [
         "internalType": "uint256"
       },
       {
-        "name": "rollA",
+        "name": "rollA1",
         "type": "uint8",
         "indexed": false,
         "internalType": "uint8"
       },
       {
-        "name": "rollB",
+        "name": "rollA2",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "rollB1",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "rollB2",
         "type": "uint8",
         "indexed": false,
         "internalType": "uint8"

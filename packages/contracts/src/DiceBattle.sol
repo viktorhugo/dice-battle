@@ -15,7 +15,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  *   1. Player A calls createRoom with a commitment hash and stakes tokens in escrow.
  *   2. Player B calls joinRoom, also staking the same amount.
  *   3. Player A calls reveal to expose their secret. The contract then uses
- *      keccak256(secret, prevrandao, playerB) to derive two dice rolls.
+ *      keccak256(secret, prevrandao, playerB, roomId) to derive four dice rolls
+ *      (two per player). The player with the highest sum wins.
  *   4. The winner gets the pot minus the protocol fee; refunds on a tie.
  *
  * Randomness model:
@@ -86,12 +87,14 @@ contract DiceBattle is ReentrancyGuard, Ownable {
     event RoomResolved(
         uint256 indexed roomId,
         address indexed winner,
-        uint8 rollA,
-        uint8 rollB,
+        uint8 rollA1,
+        uint8 rollA2,
+        uint8 rollB1,
+        uint8 rollB2,
         uint256 payout,
         uint256 fee
     );
-    event RoomTied(uint256 indexed roomId, uint8 rollA, uint8 rollB);
+    event RoomTied(uint256 indexed roomId, uint8 rollA1, uint8 rollA2, uint8 rollB1, uint8 rollB2);
     event RoomExpiredClaim(uint256 indexed roomId, address indexed claimer);
     event RoomCancelled(uint256 indexed roomId);
     event TokenWhitelisted(address indexed token, bool allowed);
@@ -187,22 +190,24 @@ contract DiceBattle is ReentrancyGuard, Ownable {
         if (msg.sender != room.playerA) revert NotPlayerA();
         if (keccak256(abi.encode(secret, msg.sender)) != room.commitment) revert InvalidReveal();
 
-        // Derive two dice rolls from the secret, prevrandao, and Player B.
-        // prevrandao provides entropy not known at create time, secret
-        // prevents B from predicting, B address prevents A from pre-selecting
-        // an advantageous seed (A does not know B at create time).
+        // Derive four dice rolls (two per player) from the seed.
+        // seed = keccak256(secret, prevrandao, playerB, roomId)
+        // prevrandao: entropy unknown at create time → A cannot cherry-pick
+        // secret:     prevents B from predicting the outcome before reveal
+        // playerB:    prevents A from pre-selecting a favorable seed (B unknown at create)
         uint256 seed = uint256(
             keccak256(
-                abi.encode(
-                    secret, block.prevrandao, room.playerB, roomId
-                )
+                abi.encode(secret, block.prevrandao, room.playerB, roomId)
             )
         );
 
-        uint8 rollA = uint8((seed & 0xFF) % 6) + 1;
-        uint8 rollB = uint8(((seed >> 8) & 0xFF) % 6) + 1;
+        // Extract 4 independent bytes from the 256-bit seed, one per die.
+        uint8 rollA1 = uint8((seed & 0xFF) % 6) + 1;
+        uint8 rollA2 = uint8(((seed >> 8) & 0xFF) % 6) + 1;
+        uint8 rollB1 = uint8(((seed >> 16) & 0xFF) % 6) + 1;
+        uint8 rollB2 = uint8(((seed >> 24) & 0xFF) % 6) + 1;
 
-        _settle(roomId, room, rollA, rollB);
+        _settle(roomId, room, rollA1, rollA2, rollB1, rollB2);
     }
 
     /**
@@ -247,18 +252,28 @@ contract DiceBattle is ReentrancyGuard, Ownable {
     //                          INTERNAL
     // =============================================================
 
-    function _settle(uint256 roomId, Room storage room, uint8 rollA, uint8 rollB) private {
+    function _settle(
+        uint256 roomId,
+        Room storage room,
+        uint8 rollA1,
+        uint8 rollA2,
+        uint8 rollB1,
+        uint8 rollB2
+    ) private {
         room.state = RoomState.Resolved;
 
-        if (rollA == rollB) {
+        uint16 totalA = uint16(rollA1) + uint16(rollA2); // 2–12
+        uint16 totalB = uint16(rollB1) + uint16(rollB2); // 2–12
+
+        if (totalA == totalB) {
             // Tie: refund both players, no fee charged.
             room.token.safeTransfer(room.playerA, room.stake);
             room.token.safeTransfer(room.playerB, room.stake);
-            emit RoomTied(roomId, rollA, rollB);
+            emit RoomTied(roomId, rollA1, rollA2, rollB1, rollB2);
             return;
         }
 
-        address winner = rollA > rollB ? room.playerA : room.playerB;
+        address winner = totalA > totalB ? room.playerA : room.playerB;
         uint256 pot = uint256(room.stake) * 2;
         uint256 fee = (pot * feeBps) / 10_000;
         uint256 payout = pot - fee;
@@ -266,7 +281,7 @@ contract DiceBattle is ReentrancyGuard, Ownable {
         accruedFees[address(room.token)] += fee;
         room.token.safeTransfer(winner, payout);
 
-        emit RoomResolved(roomId, winner, rollA, rollB, payout, fee);
+        emit RoomResolved(roomId, winner, rollA1, rollA2, rollB1, rollB2, payout, fee);
     }
 
     // =============================================================
