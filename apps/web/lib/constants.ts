@@ -29,6 +29,11 @@ export function getTokenAddress(key: TokenKey): Address {
 export const GAME_ADDRESS = (process.env.NEXT_PUBLIC_GAME_ADDRESS ||
   "0x0000000000000000000000000000000000000000") as Address;
 
+export const GAME_DEPLOY_BLOCK: bigint =
+  NETWORK === "celo_sepolia"
+    ? 23_860_807n
+    : BigInt(process.env.NEXT_PUBLIC_GAME_DEPLOY_BLOCK || "0");
+
 export const CHAIN_ID = NETWORK === "celo" ? 42_220 : 11_142_220;
 
 // Minimal ERC20 ABI for approve/allowance/balanceOf
