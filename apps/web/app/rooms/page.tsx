@@ -6,8 +6,9 @@ import { decodeEventLog, formatUnits } from "viem";
 import { usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { GAME_ADDRESS, TOKENS } from "@/lib/constants";
-import { truncateAddress } from "@/lib/utils";
+import { GAME_ADDRESS, GAME_DEPLOY_BLOCK } from "@/lib/constants";
+import { truncateAddress, getTokenSymbol } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 type OpenRoom = {
   roomId: bigint;
@@ -17,14 +18,6 @@ type OpenRoom = {
 };
 
 const CLOSED_EVENTS = new Set(["RoomJoined", "RoomResolved", "RoomTied", "RoomExpiredClaim", "RoomCancelled"]);
-
-function tokenSymbol(token: `0x${string}`): string {
-  const lower = token.toLowerCase();
-  for (const [key, addr] of Object.entries(TOKENS)) {
-    if (addr.toLowerCase() === lower) return key;
-  }
-  return "UNKNOWN";
-}
 
 export default function RoomsPage() {
   const publicClient = usePublicClient();
@@ -37,15 +30,16 @@ export default function RoomsPage() {
 
     (async () => {
       try {
-        // Single getLogs call — all DiceBattle events from the beginning.
-        // Open = RoomCreated − (RoomJoined ∪ RoomResolved ∪ RoomTied ∪ RoomExpiredClaim ∪ RoomCancelled)
-        // Zero readContract calls needed.
-        // For high-volume mainnet use a subgraph instead.
+        const fromBlock = GAME_DEPLOY_BLOCK ?? 0n;
+        logger.log("[rooms] Buscando salas — fromBlock:", fromBlock);
+
         const logs = await publicClient.getLogs({
           address: GAME_ADDRESS,
-          fromBlock: 0n,
+          fromBlock,
           toBlock: "latest",
         });
+
+        logger.log("[rooms] Logs recibidos:", logs.length);
 
         const created = new Map<string, OpenRoom>();
         const closed = new Set<string>();
@@ -80,11 +74,14 @@ export default function RoomsPage() {
         const open = [...created.entries()]
           .filter(([id]) => !closed.has(id))
           .map(([, room]) => room)
-          .reverse(); // newest first
+          .reverse();
 
+        logger.log("[rooms] Salas creadas:", created.size, "| cerradas:", closed.size, "| abiertas:", open.length);
         setRooms(open);
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        const msg = e instanceof Error ? e.message : String(e);
+        logger.error("[rooms] Error cargando salas:", msg);
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -138,7 +135,7 @@ export default function RoomsPage() {
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <span className="font-semibold text-white">
-                    {formatUnits(room.stake, 18)} {tokenSymbol(room.token)}
+                    {formatUnits(room.stake, 18)} {getTokenSymbol(room.token)}
                   </span>
                   <span className="text-xs text-white/40">each player</span>
                 </div>

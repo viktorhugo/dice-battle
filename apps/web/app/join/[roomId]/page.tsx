@@ -7,8 +7,9 @@ import { formatUnits } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { ERC20_ABI, GAME_ADDRESS, TOKENS } from "@/lib/constants";
-import { truncateAddress } from "@/lib/utils";
+import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
+import { truncateAddress, getTokenSymbol } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 type Room = {
   playerA: `0x${string}`;
@@ -55,22 +56,37 @@ export default function JoinRoomPage() {
   // Initial load
   useEffect(() => {
     if (!publicClient || !params.roomId) return;
+    logger.log("[join] Cargando sala roomId:", params.roomId);
     fetchRoom()
-      .then((r) => { if (r) setRoom(r); })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .then((r) => {
+        if (r) {
+          setRoom(r);
+          logger.log("[join] Sala cargada — state:", r.state, "| playerA:", r.playerA, "| stake:", r.stake.toString());
+        }
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        logger.error("[join] Error cargando sala:", msg);
+        setError(msg);
+      })
       .finally(() => setLoading(false));
   }, [fetchRoom, publicClient, params.roomId]);
 
   // Poll every 4s while state=Open so Player A sees when Player B joins
   useEffect(() => {
     if (!room || room.state !== 1 || busy) return;
+    logger.log("[join] Iniciando polling — esperando que alguien una la sala");
 
     pollingRef.current = setInterval(async () => {
       try {
         const updated = await fetchRoom();
         if (!updated) return;
+        if (updated.state !== room.state) {
+          logger.log("[join] Estado cambió:", room.state, "→", updated.state);
+        }
         setRoom(updated);
         if (updated.state !== 1) {
+          logger.log("[join] Sala ya no está Open — deteniendo polling");
           clearInterval(pollingRef.current!);
           pollingRef.current = null;
         }
@@ -84,47 +100,60 @@ export default function JoinRoomPage() {
     };
   }, [room?.state, busy, fetchRoom]);
 
-  const tokenSymbol =
-    room?.token.toLowerCase() === TOKENS.cUSD.toLowerCase() ? "cUSD" :
-    room?.token.toLowerCase() === TOKENS.USDT.toLowerCase() ? "USDT" :
-    "UNKNOWN";
-
   async function onJoin() {
+    logger.log("[onJoin] Iniciando join — wallet:", address, "| roomId:", params.roomId);
     if (!address || !publicClient || !room) return;
     setBusy(true);
     setError(null);
 
     try {
       // 1. Approve if needed
+      logger.log("[onJoin] [1/2] Consultando allowance del ERC20...");
       const allowance = (await publicClient.readContract({
         address: room.token,
         abi: ERC20_ABI,
         functionName: "allowance",
         args: [address, GAME_ADDRESS],
       })) as bigint;
+      logger.log("[onJoin] Allowance actual:", allowance.toString(), "| Stake requerido:", room.stake.toString());
 
       if (allowance < room.stake) {
+        logger.log("[onJoin] Allowance insuficiente — enviando approve...");
         const approveHash = await writeContractAsync({
           address: room.token,
           abi: ERC20_ABI,
           functionName: "approve",
           args: [GAME_ADDRESS, room.stake],
         });
+        logger.log("[onJoin] Tx approve enviada:", approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        logger.log("[onJoin] Approve confirmado");
+      } else {
+        logger.log("[onJoin] Allowance suficiente — omitiendo approve");
       }
 
       // 2. Join room
+      logger.log("[onJoin] [2/2] Enviando joinRoom al contrato...");
       const joinHash = await writeContractAsync({
         address: GAME_ADDRESS,
         abi: DICE_BATTLE_ABI,
         functionName: "joinRoom",
         args: [BigInt(params.roomId)],
       });
-      await publicClient.waitForTransactionReceipt({ hash: joinHash });
+      logger.log("[onJoin] Tx joinRoom enviada:", joinHash);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: joinHash });
+      logger.log("[onJoin] Tx confirmada — bloque:", receipt.blockNumber.toString(), "| status:", receipt.status);
 
+      if (receipt.status === "reverted") {
+        throw new Error(`Transaction reverted (hash: ${joinHash})`);
+      }
+
+      logger.log("[onJoin] Join exitoso — redirigiendo a /game/" + params.roomId);
       router.push(`/game/${params.roomId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.error("[onJoin] Error:", msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -143,9 +172,7 @@ export default function JoinRoomPage() {
     return (
       <div className="flex flex-col gap-4">
         <WalletBar />
-        <Link href="/" className="pt-2 text-sm text-white/60">
-          ← Back
-        </Link>
+        <Link href="/" className="pt-2 text-sm text-white/60">← Back</Link>
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
           Room #{params.roomId} does not exist.
         </div>
@@ -154,15 +181,15 @@ export default function JoinRoomPage() {
   }
 
   const isPlayerA = address?.toLowerCase() === room.playerA.toLowerCase();
+  const isPlayerB = address?.toLowerCase() === room.playerB.toLowerCase();
+  const tokenSymbol = getTokenSymbol(room.token);
 
   return (
     <div className="flex flex-col gap-6">
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">
-          ← Back
-        </Link>
+        <Link href="/" className="text-sm text-white/60">← Back</Link>
         <h1 className="text-lg font-semibold">Room #{params.roomId}</h1>
         <div className="w-10" />
       </header>
@@ -184,6 +211,7 @@ export default function JoinRoomPage() {
         </div>
       </section>
 
+      {/* Player A waiting for opponent */}
       {room.state === 1 && isPlayerA && (
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
           <p>You created this room. Share the link with your opponent.</p>
@@ -204,6 +232,7 @@ export default function JoinRoomPage() {
         </div>
       )}
 
+      {/* Player B can join */}
       {room.state === 1 && !isPlayerA && (
         <button
           type="button"
@@ -215,6 +244,7 @@ export default function JoinRoomPage() {
         </button>
       )}
 
+      {/* Room matched — go to game */}
       {room.state === 2 && (
         <Link
           href={`/game/${params.roomId}`}
@@ -222,6 +252,31 @@ export default function JoinRoomPage() {
         >
           Go to game →
         </Link>
+      )}
+
+      {/* Game already finished */}
+      {(room.state === 3 || room.state === 4) && (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/60">
+            {room.state === 3
+              ? "This game has already been resolved."
+              : "This game expired — host never revealed."}
+            {(isPlayerA || isPlayerB) && (
+              <Link
+                href={`/game/${params.roomId}`}
+                className="mt-2 block text-xs text-celo-yellow underline"
+              >
+                View result →
+              </Link>
+            )}
+          </div>
+          <Link
+            href="/create"
+            className="rounded-2xl border border-white/15 py-4 text-center font-semibold text-white active:opacity-80"
+          >
+            Create a new room
+          </Link>
+        </div>
       )}
     </div>
   );
