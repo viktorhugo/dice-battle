@@ -14,7 +14,7 @@ Casual peer-to-peer betting in Latin America happens constantly — pick a numbe
 
 ## The solution
 
-Dice Battle is a two-player dice battle where the escrow, the randomness, and the payout all live onchain. Stake 1 cUSD or USDT, invite a friend, the contract rolls two dice using verifiable onchain entropy, and the winner receives the pot minus a 2% protocol fee — all inside MiniPay, paid in stablecoins, with sub-cent gas.
+Dice Battle is a two-player dice battle where the escrow, the randomness, and the payout all live onchain. Stake 1 cUSD or USDT, invite a friend, the contract rolls **four dice (two per player)** using verifiable onchain entropy — the player with the highest sum wins the pot minus a 2% protocol fee — all inside MiniPay, paid in stablecoins, with sub-cent gas.
 
 - **No bookie.** The smart contract is the escrow.
 - **Provably fair.** Uses `block.prevrandao` combined with a commit-reveal scheme so neither player can cheat.
@@ -52,7 +52,7 @@ The game uses a **commit-reveal + prevrandao** pattern:
 
 1. Player A commits `keccak256(abi.encode(secret, playerA))` when creating the room. The secret is generated in the browser and stored in localStorage — it never hits the blockchain until reveal.
 2. Player B joins without knowing the secret.
-3. Player A reveals the secret. The contract derives two dice rolls from `keccak256(secret, prevrandao, playerB, roomId)`.
+3. Player A reveals the secret. The contract derives **four dice rolls (two per player)** from `keccak256(secret, prevrandao, playerB, roomId)`. Each roll uses an independent byte of the 256-bit seed. The player with the highest sum wins.
 
 This gives us:
 - **Player A cannot predict the outcome** (prevrandao was not known when A committed).
@@ -118,6 +118,31 @@ pnpm test
 pnpm build
 ```
 
+### Envio indexer local dev
+
+The `packages/envio-indexer` package has a generated ReScript subpackage in `packages/envio-indexer/generated`.
+Before starting the indexer locally, build that generated package and install its dependencies:
+
+```bash
+cd packages/envio-indexer/generated
+pnpm install --ignore-workspace
+pnpm build
+```
+
+Then run the local indexer from the parent package:
+
+```bash
+cd ../
+pnpm dev
+```
+
+If `envio dev` fails with `Cannot find module './src/db/Migrations.res.js'`, it usually means the generated package has not been built or its local `node_modules` are missing. In that case install the missing dependency as well:
+
+```bash
+cd packages/envio-indexer/generated
+pnpm install --ignore-workspace @envio-dev/hypersync-client
+```
+
 ### Deploying
 
 The deploy scripts use Foundry's encrypted keystore — no private key in environment variables.
@@ -164,8 +189,8 @@ pnpm --filter contracts test:fuzz
 
 | Network      | Address                       | Verification                                        |
 | ------------ | ----------------------------- | --------------------------------------------------- |
-| Celo mainnet | _to be filled after deploy_                        | [Celoscan](https://celoscan.io)                     |
-| Celo Sepolia | `0x290FA37C3a08291A97E6B995BBC27a3a1A385e9C` | [Celoscan Sepolia](https://celo-sepolia.blockscout.com) |
+| Celo mainnet | _to be filled after deploy_                          | [Celoscan](https://celoscan.io)                         |
+| Celo Sepolia | `0x5803454e1abE598Bd525a613bb5034b4aE192590`          | [Blockscout](https://celo-sepolia.blockscout.com/address/0x5803454e1abE598Bd525a613bb5034b4aE192590) |
 
 ## Why this belongs on MiniPay
 
