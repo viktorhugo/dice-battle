@@ -1,0 +1,44 @@
+type DiceBattle_RoomCancelled {
+  id: ID!
+  roomId: BigInt!
+}
+
+type DiceBattle_RoomCreated {
+  id: ID!
+  roomId: BigInt!
+  playerA: String!
+  token: String!
+  stake: BigInt!
+  commitment: String!
+}
+
+type DiceBattle_RoomExpiredClaim {
+  id: ID!
+  roomId: BigInt!
+  claimer: String!
+}
+
+type DiceBattle_RoomJoined {
+  id: ID!
+  roomId: BigInt!
+  playerB: String!
+  matchedAtBlock: BigInt!
+}
+
+type DiceBattle_RoomResolved {
+  id: ID!
+  roomId: BigInt!
+  winner: String!
+  rollA: BigInt!
+  rollB: BigInt!
+  payout: BigInt!
+  fee: BigInt!
+}
+
+type DiceBattle_RoomTied {
+  id: ID!
+  roomId: BigInt!
+  rollA: BigInt!
+  rollB: BigInt!
+}
+

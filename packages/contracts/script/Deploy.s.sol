@@ -34,7 +34,9 @@ contract Deploy is Script {
     address internal constant USDC_MAINNET = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
 
     // Celo Sepolia testnet stablecoin
-    address internal constant CUSD_SEPOLIA = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
+    address internal constant CUSD_SEPOLIA = 0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b;
+    address internal constant USDC_SEPOLIA = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
+    address internal constant USDT_SEPOLIA = 0xd077A400968890Eacc75cdc901F0356c943e4fDb;
     address internal constant CELO_SEPOLIA = 0x4200000000000000000000000000000000000011;
 
     function run() external {
@@ -57,7 +59,9 @@ contract Deploy is Script {
             // Celo Sepolia
             game.setTokenAllowed(CUSD_SEPOLIA, true);
             game.setTokenAllowed(CELO_SEPOLIA, true);
-            console2.log("Whitelisted cUSD and CELO on Celo Sepolia");
+            game.setTokenAllowed(USDT_SEPOLIA, true);
+            game.setTokenAllowed(USDC_SEPOLIA, true);
+            console2.log("Whitelisted cUSD, CELO, USDT and USDC on Celo Sepolia");
         } else {
             console2.log("Unknown chain, skipping token whitelist");
         }

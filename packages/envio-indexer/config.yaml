@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: envio-indexer
+unordered_multichain_mode: true
+preload_handlers: true
+
+# Global contract definition — shared across all networks
+contracts:
+  - name: DiceBattle
+    handler: src/EventHandlers.ts
+    events:
+      - event: RoomCancelled(uint256 indexed roomId)
+      - event: RoomCreated(uint256 indexed roomId, address indexed playerA, address indexed token, uint256 stake, bytes32 commitment)
+      - event: RoomExpiredClaim(uint256 indexed roomId, address indexed claimer)
+      - event: RoomJoined(uint256 indexed roomId, address indexed playerB, uint256 matchedAtBlock)
+      - event: RoomResolved(uint256 indexed roomId, address indexed winner, uint8 rollA, uint8 rollB, uint256 payout, uint256 fee)
+      - event: RoomTied(uint256 indexed roomId, uint8 rollA, uint8 rollB)
+
+networks:
+- id: 44787  # Celo Sepolia (no HyperSync — uses RPC)
+  start_block: 23860807
+  rpc_config:
+    url: https://forno.celo-sepolia.celo-testnet.org
+  contracts:
+    - name: DiceBattle
+      address:
+        - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
+- id: 42220
+  start_block: 0
+  contracts:
+  - name: DiceBattle
+    address:
+    - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
+
