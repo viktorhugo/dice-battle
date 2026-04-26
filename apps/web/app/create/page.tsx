@@ -8,9 +8,15 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { computeCommitment, generateSecret, storeSecret } from "@/lib/commitment";
-import { ERC20_ABI, GAME_ADDRESS, TOKENS } from "@/lib/constants";
+import { ERC20_ABI, GAME_ADDRESS, getTokenAddress, TOKEN_KEYS, TokenKey } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
-type TokenKey = "cUSD" | "USDT" | "USDC";
+const GRID_COLS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
 
 const STAKE_PRESETS = [
   { label: "0.50", value: "0.5" },
@@ -23,7 +29,7 @@ export default function CreateRoomPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
+  const { mutateAsync: writeContractAsync } = useWriteContract();
 
   const [token, setToken] = useState<TokenKey>("cUSD");
   const [stake, setStake] = useState("1");
@@ -32,11 +38,16 @@ export default function CreateRoomPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function onCreate() {
+    logger.log("[onCreate] Iniciando creación de sala");
+    logger.log("[onCreate] Wallet:", address, "| Token:", token, "| Stake:", stake);
+
     if (!address || !publicClient) {
+      logger.warn("[onCreate] Abortado: wallet no conectada");
       setError("Connect your wallet first");
       return;
     }
     if (GAME_ADDRESS === "0x0000000000000000000000000000000000000000") {
+      logger.warn("[onCreate] Abortado: NEXT_PUBLIC_GAME_ADDRESS no configurado");
       setError("Contract address not configured. Set NEXT_PUBLIC_GAME_ADDRESS.");
       return;
     }
@@ -45,22 +56,26 @@ export default function CreateRoomPage() {
     setError(null);
 
     try {
-      const tokenAddress = TOKENS[token];
+      const tokenAddress = getTokenAddress(token);
       const stakeWei = parseUnits(stake, 18);
+      logger.log("[onCreate] Token address:", tokenAddress);
+      logger.log("[onCreate] Stake en wei:", stakeWei.toString());
 
       // 1. Check allowance, approve if needed
+      logger.log("[onCreate] [1/5] Consultando allowance del ERC20...");
       const allowance = (
-          await publicClient.readContract({
+        await publicClient.readContract({
           address: tokenAddress,
           abi: ERC20_ABI,
           functionName: "allowance",
           args: [address, GAME_ADDRESS],
         })
       ) as bigint;
-      console.log("stakeWei:", stakeWei);
-      console.log("Current allowance:", allowance.toString());
+      logger.log("[onCreate] Allowance actual:", allowance.toString());
+      logger.log("[onCreate] Allowance suficiente:", allowance >= stakeWei);
 
       if (allowance < stakeWei) {
+        logger.log("[onCreate] Allowance insuficiente — enviando approve...");
         setStep("approving");
         const approveHash = await writeContractAsync({
           address: tokenAddress,
@@ -68,14 +83,23 @@ export default function CreateRoomPage() {
           functionName: "approve",
           args: [GAME_ADDRESS, stakeWei],
         });
+        logger.log("[onCreate] Tx approve enviada:", approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        logger.log("[onCreate] Approve confirmado");
+      } else {
+        logger.log("[onCreate] Allowance ya suficiente — se omite approve");
       }
 
       // 2. Generate secret and commitment
+      logger.log("[onCreate] [2/5] Generando secreto y commitment...");
       const secret = generateSecret();
       const commitment = computeCommitment(secret, address);
+      logger.log("[onCreate] Secret (bytes32):", secret);
+      logger.log("[onCreate] Commitment (keccak256(secret, address)):", commitment);
 
       // 3. Create room
+      logger.log("[onCreate] [3/5] Enviando createRoom al contrato...");
+      logger.log("[onCreate] Args → token:", tokenAddress, "| stake:", stakeWei.toString(), "| commitment:", commitment);
       setStep("creating");
       const createHash = await writeContractAsync({
         address: GAME_ADDRESS,
@@ -83,9 +107,16 @@ export default function CreateRoomPage() {
         functionName: "createRoom",
         args: [tokenAddress, stakeWei, commitment],
       });
+      logger.log("[onCreate] Tx createRoom enviada:", createHash);
       const receipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
+      logger.log("[onCreate] Tx confirmada en bloque:", receipt.blockNumber.toString(), "| status:", receipt.status, "| logs:", receipt.logs.length);
+
+      if (receipt.status === "reverted") {
+        throw new Error(`Transaction reverted (hash: ${createHash}). Check token is allowed and balance is sufficient.`);
+      }
 
       // 4. Parse RoomCreated event to get roomId
+      logger.log("[onCreate] [4/5] Buscando evento RoomCreated en los logs...");
       let roomId: bigint | null = null;
       for (const log of receipt.logs) {
         try {
@@ -94,26 +125,32 @@ export default function CreateRoomPage() {
             data: log.data,
             topics: log.topics,
           });
+          logger.log("[onCreate] Log decodificado:", decoded.eventName, decoded.args);
           if (decoded.eventName === "RoomCreated") {
             roomId = (decoded.args as { roomId: bigint }).roomId;
+            logger.log("[onCreate] RoomCreated encontrado — roomId:", roomId.toString());
             break;
           }
         } catch {
-          // not our event
+          // log de otro contrato, ignorar
         }
       }
 
       if (roomId === null) {
+        logger.error("[onCreate] No se encontró RoomCreated en el receipt");
         throw new Error("Could not find RoomCreated event in receipt");
       }
 
       // 5. Persist secret locally (only on creator's device!)
+      logger.log("[onCreate] [5/5] Guardando secreto en localStorage para roomId:", roomId.toString());
       storeSecret(roomId.toString(), secret);
+      logger.log("[onCreate] Secreto guardado. Redirigiendo a /join/" + roomId);
 
       setStep("done");
-      router.push(`/game/${roomId}`);
+      router.push(`/join/${roomId}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      logger.error("[onCreate] Error:", msg);
       setError(msg);
       setStep("idle");
     } finally {
@@ -137,21 +174,23 @@ export default function CreateRoomPage() {
         <label className="text-xs font-medium uppercase tracking-wider text-white/50">
           Token
         </label>
-        <div className="grid grid-cols-3 gap-2">
-          {(["cUSD", "USDT", "USDC"] as const).map( (token) => (
-            <button
-              key={token}
-              type="button"
-              onClick={() => setToken(token)}
-              className={`rounded-xl border py-3 text-sm font-semibold ${
-                token === token
-                  ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
-                  : "border-white/10 text-white/70"
-              }`}
-            >
-              {token}
-            </button>
-          ))}
+        <div className={`grid ${GRID_COLS[TOKEN_KEYS.length] ?? "grid-cols-2"} gap-2`}>
+          {
+            TOKEN_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setToken(key)}
+                className={`rounded-xl border py-3 text-sm font-semibold ${
+                  key === token
+                    ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
+                    : "border-white/10 text-white/70"
+                }`}
+              >
+                {key}
+              </button>
+            ))
+          }
         </div>
       </section>
 

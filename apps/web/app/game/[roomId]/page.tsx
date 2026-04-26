@@ -31,7 +31,7 @@ export default function GamePage() {
   const params = useParams<{ roomId: string }>();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
+  const { mutateAsync: writeContractAsync } = useWriteContract();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [result, setResult] = useState<Result | null>(null);

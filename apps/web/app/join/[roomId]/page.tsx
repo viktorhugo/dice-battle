@@ -8,6 +8,7 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS, TOKENS } from "@/lib/constants";
+import { truncateAddress } from "@/lib/utils";
 
 type Room = {
   playerA: `0x${string}`;
@@ -24,7 +25,7 @@ export default function JoinRoomPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
+  const { mutateAsync: writeContractAsync } = useWriteContract();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,9 +147,7 @@ export default function JoinRoomPage() {
       <section className="rounded-xl bg-white/5 p-4 text-sm">
         <div className="flex justify-between">
           <span className="text-white/60">Host</span>
-          <span className="font-mono text-white/80">
-            {room.playerA.slice(0, 6)}…{room.playerA.slice(-4)}
-          </span>
+          <span className="font-mono text-white/80">{truncateAddress(room.playerA)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-white/60">Stake</span>

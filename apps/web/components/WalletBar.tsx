@@ -1,14 +1,12 @@
 "use client";
 
+import { AppKitButton } from "@reown/appkit/react";
 import { useMiniPay } from "@/hooks/useMiniPay";
-
-function truncate(addr?: string) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+import { NETWORK } from "@/lib/constants";
+import { NETWORK_LABEL } from "@/lib/utils";
 
 export function WalletBar() {
-  const { isMiniPay, address, isConnected, checked } = useMiniPay();
+  const { isMiniPay, checked } = useMiniPay();
 
   if (!checked) {
     return (
@@ -21,23 +19,15 @@ export function WalletBar() {
   return (
     <div className="flex items-center justify-between text-xs">
       <div className="flex items-center gap-2">
-        {
-          isMiniPay && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-minipay-teal/20 px-2 py-0.5 text-minipay-teal">
-              <span className="h-1.5 w-1.5 rounded-full bg-minipay-teal" />
-              MiniPay
-            </span>
-          )
-        }
-        {
-          isConnected && address ? (
-            <span className="font-mono text-white/70">{truncate(address)}</span>
-          ) : (
-            <span className="text-white/50">No wallet</span>
-          )
-        }
+        {isMiniPay && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-minipay-teal/20 px-2 py-0.5 text-minipay-teal">
+            <span className="h-1.5 w-1.5 rounded-full bg-minipay-teal" />
+            MiniPay
+          </span>
+        )}
+        <AppKitButton />
       </div>
-      <span className="text-white/40">Celo mainnet</span>
+      <span className="text-white/40">{NETWORK_LABEL[NETWORK] ?? "Celo"}</span>
     </div>
   );
 }
