@@ -25,7 +25,7 @@ networks:
       address:
         - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
 - id: 42220
-  start_block: 0
+  start_block: 65267000
   contracts:
   - name: DiceBattle
     address:

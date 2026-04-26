@@ -29,8 +29,10 @@ type DiceBattle_RoomResolved {
   id: ID!
   roomId: BigInt!
   winner: String!
-  rollA: BigInt!
-  rollB: BigInt!
+  rollA1: BigInt!
+  rollA2: BigInt!
+  rollB1: BigInt!
+  rollB2: BigInt!
   payout: BigInt!
   fee: BigInt!
 }
@@ -38,7 +40,9 @@ type DiceBattle_RoomResolved {
 type DiceBattle_RoomTied {
   id: ID!
   roomId: BigInt!
-  rollA: BigInt!
-  rollB: BigInt!
+  rollA1: BigInt!
+  rollA2: BigInt!
+  rollB1: BigInt!
+  rollB2: BigInt!
 }
 

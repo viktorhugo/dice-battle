@@ -59,8 +59,10 @@ DiceBattle.RoomResolved.handler(async ({ event, context }) => {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
     roomId: event.params.roomId,
     winner: event.params.winner,
-    rollA: event.params.rollA,
-    rollB: event.params.rollB,
+    rollA1: event.params.rollA1,
+    rollA2: event.params.rollA2,
+    rollB1: event.params.rollB1,
+    rollB2: event.params.rollB2,
     payout: event.params.payout,
     fee: event.params.fee,
   };
@@ -72,8 +74,10 @@ DiceBattle.RoomTied.handler(async ({ event, context }) => {
   const entity: DiceBattle_RoomTied = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
     roomId: event.params.roomId,
-    rollA: event.params.rollA,
-    rollB: event.params.rollB,
+    rollA1: event.params.rollA1,
+    rollA2: event.params.rollA2,
+    rollB1: event.params.rollB1,
+    rollB2: event.params.rollB2,
   };
 
   context.DiceBattle_RoomTied.set(entity);
