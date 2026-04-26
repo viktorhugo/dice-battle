@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { decodeEventLog, formatUnits, type Hex } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
@@ -38,6 +38,7 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
     if (!publicClient || !params.roomId) return;
@@ -49,22 +50,25 @@ export default function GamePage() {
     })) as readonly [
       `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number
     ];
-    setRoom({
+    const updated: Room = {
       playerA: r[0],
       playerB: r[1],
       token: r[2],
       stake: r[3],
       matchedAtBlock: r[4],
       state: r[6],
-    });
+    };
+    setRoom(updated);
 
-    // If resolved, fetch result from events
-    if (r[6] === 3) {
+    // Fetch result events for Resolved (3) or Expired (4)
+    if (r[6] === 3 || r[6] === 4) {
       const roomId = BigInt(params.roomId);
+      // Search from matchedAtBlock for precision
+      const fromBlock = r[4] > 0n ? r[4] : 0n;
       const latest = await publicClient.getBlockNumber();
       const logs = await publicClient.getLogs({
         address: GAME_ADDRESS,
-        fromBlock: latest > 10_000n ? latest - 10_000n : 0n,
+        fromBlock,
         toBlock: latest,
       });
       for (const log of logs) {
@@ -86,13 +90,7 @@ export default function GamePage() {
               payout: bigint;
               fee: bigint;
             };
-            setResult({
-              kind: "win",
-              rollA: args.rollA,
-              rollB: args.rollB,
-              winner: args.winner,
-              payout: args.payout,
-            });
+            setResult({ kind: "win", rollA: args.rollA, rollB: args.rollB, winner: args.winner, payout: args.payout });
             return;
           }
           if (
@@ -110,6 +108,13 @@ export default function GamePage() {
             setResult({ kind: "expired" });
             return;
           }
+          if (
+            decoded.eventName === "RoomCancelled" &&
+            (decoded.args as { roomId: bigint }).roomId === roomId
+          ) {
+            setResult({ kind: "expired" });
+            return;
+          }
         } catch {
           // not our event
         }
@@ -121,6 +126,31 @@ export default function GamePage() {
     setLoading(true);
     refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  // Poll every 4s while Matched (state=2) so both players see result automatically
+  useEffect(() => {
+    if (!room || room.state !== 2 || busy) return;
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        await refresh();
+      } catch {
+        // ignore poll errors
+      }
+    }, 4000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [room?.state, busy, refresh]);
+
+  // Stop polling once resolved/expired
+  useEffect(() => {
+    if (room && room.state !== 2 && pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, [room?.state]);
 
   const tokenSymbol =
     room?.token.toLowerCase() === TOKENS.cUSD.toLowerCase() ? "cUSD" :
@@ -243,6 +273,13 @@ export default function GamePage() {
         </section>
       )}
 
+      {/* Waiting indicator for Player B */}
+      {room.state === 2 && !result && isPlayerB && (
+        <p className="text-center text-sm text-white/50 animate-pulse">
+          Waiting for host to reveal…
+        </p>
+      )}
+
       {/* Actions */}
       {room.state === 2 && (
         <section className="flex flex-col gap-3">
@@ -255,11 +292,6 @@ export default function GamePage() {
             >
               {busy ? "Rolling…" : "Reveal and roll"}
             </button>
-          )}
-          {isPlayerB && (
-            <div className="text-center text-sm text-white/60">
-              Waiting for host to reveal…
-            </div>
           )}
           {isPlayerB && (
             <button
@@ -280,7 +312,6 @@ export default function GamePage() {
         </div>
       )}
 
-      {/* Share new match */}
       {result && (
         <Link
           href="/create"

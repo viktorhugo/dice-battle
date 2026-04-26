@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
@@ -31,35 +31,58 @@ export default function JoinRoomPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const fetchRoom = useCallback(async () => {
+    if (!publicClient || !params.roomId) return null;
+    const result = (await publicClient.readContract({
+      address: GAME_ADDRESS,
+      abi: DICE_BATTLE_ABI,
+      functionName: "rooms",
+      args: [BigInt(params.roomId)],
+    })) as readonly [
+      `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number
+    ];
+    return {
+      playerA: result[0],
+      playerB: result[1],
+      token: result[2],
+      stake: result[3],
+      state: result[6],
+    } as Room;
+  }, [publicClient, params.roomId]);
+
+  // Initial load
   useEffect(() => {
     if (!publicClient || !params.roomId) return;
+    fetchRoom()
+      .then((r) => { if (r) setRoom(r); })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false));
+  }, [fetchRoom, publicClient, params.roomId]);
 
-    (async () => {
+  // Poll every 4s while state=Open so Player A sees when Player B joins
+  useEffect(() => {
+    if (!room || room.state !== 1 || busy) return;
+
+    pollingRef.current = setInterval(async () => {
       try {
-        const result = (await publicClient.readContract({
-          address: GAME_ADDRESS,
-          abi: DICE_BATTLE_ABI,
-          functionName: "rooms",
-          args: [BigInt(params.roomId)],
-        })) as readonly [
-          `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number
-        ];
-
-        setRoom({
-          playerA: result[0],
-          playerB: result[1],
-          token: result[2],
-          stake: result[3],
-          state: result[6],
-        });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoading(false);
+        const updated = await fetchRoom();
+        if (!updated) return;
+        setRoom(updated);
+        if (updated.state !== 1) {
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+        }
+      } catch {
+        // ignore poll errors
       }
-    })();
-  }, [publicClient, params.roomId]);
+    }, 4000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [room?.state, busy, fetchRoom]);
 
   const tokenSymbol =
     room?.token.toLowerCase() === TOKENS.cUSD.toLowerCase() ? "cUSD" :
@@ -163,12 +186,11 @@ export default function JoinRoomPage() {
 
       {room.state === 1 && isPlayerA && (
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-          You created this room. Share the link with your opponent.
+          <p>You created this room. Share the link with your opponent.</p>
+          <p className="mt-1 text-xs text-white/40 animate-pulse">Waiting for someone to join…</p>
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard?.writeText(window.location.href);
-            }}
+            onClick={() => navigator.clipboard?.writeText(window.location.href)}
             className="mt-2 block w-full rounded-lg border border-white/10 py-2 text-xs text-white active:opacity-70"
           >
             Copy link
@@ -198,7 +220,7 @@ export default function JoinRoomPage() {
           href={`/game/${params.roomId}`}
           className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
         >
-          Go to game
+          Go to game →
         </Link>
       )}
     </div>
