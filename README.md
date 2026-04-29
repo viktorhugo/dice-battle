@@ -2,7 +2,7 @@
 
 > PvP dice-rolling betting game built as a MiniApp for MiniPay, running on Celo mainnet.
 
-[![CI](https://github.com/<your-user>/dice-battle/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-user>/dice-battle/actions/workflows/ci.yml)
+[![CI](https://github.com/viktorhugo/dice-battle/actions/workflows/ci.yml/badge.svg)](https://github.com/viktorhugo/dice-battle/actions/workflows/ci.yml)
 [![Celo](https://img.shields.io/badge/Celo-mainnet-FCFF52?style=flat)](https://celo.org)
 [![MiniPay](https://img.shields.io/badge/MiniPay-compatible-%2300C4B3)](https://minipay.to)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-black)](https://getfoundry.sh)
@@ -24,23 +24,25 @@ Dice Battle is a two-player dice battle where the escrow, the randomness, and th
 
 ## Monorepo layout
 
-```
+```text
 dice-battle/
 ├── apps/
-│   └── web/              # Next.js 16 frontend with wagmi + viem
-│       ├── app/          # App Router pages
-│       ├── components/   # UI components
-│       ├── hooks/        # Custom hooks (useMiniPay)
-│       └── lib/          # wagmi config, constants, ABI, commitment utils
+│   └── web/                  # Next.js 16 frontend with wagmi + viem
+│       ├── app/              # App Router pages
+│       ├── components/       # UI components
+│       ├── config/           # Wagmi & Reown AppKit config
+│       ├── hooks/            # Custom hooks (useMiniPay)
+│       └── lib/              # Constants, ABI, commitment utils
 ├── packages/
-│   └── contracts/        # Foundry project
-│       ├── src/          # DiceBattle.sol, MockERC20.sol
-│       ├── test/         # Full test suite with fuzzing
-│       └── script/       # Deploy.s.sol
+│   ├── contracts/            # Foundry project
+│   │   ├── src/              # DiceBattle.sol, MockERC20.sol
+│   │   ├── test/             # Full test suite with fuzzing
+│   │   └── script/           # Deploy.s.sol
+│   └── envio-indexer/        # Envio event indexer (optional)
 ├── scripts/
-│   └── sync-abi.mjs      # Copies ABI from Foundry build → frontend
-├── .github/workflows/    # CI (contracts + web in parallel)
-├── package.json          # Root with pnpm workspaces
+│   └── sync-abi.mjs          # Copies ABI from Foundry build → frontend
+├── .github/workflows/        # CI (contracts + web in parallel)
+├── package.json              # Root with pnpm workspaces
 └── pnpm-workspace.yaml
 ```
 
@@ -55,6 +57,7 @@ The game uses a **commit-reveal + prevrandao** pattern:
 3. Player A reveals the secret. The contract derives **four dice rolls (two per player)** from `keccak256(secret, prevrandao, playerB, roomId)`. Each roll uses an independent byte of the 256-bit seed. The player with the highest sum wins.
 
 This gives us:
+
 - **Player A cannot predict the outcome** (prevrandao was not known when A committed).
 - **Player B cannot influence the outcome** (A's commitment was locked before B joined).
 - **The block proposer has at most 1 bit of influence** — acceptable for micro-stakes (max 5 USDT). For high-stakes games, a VRF oracle would be needed.
@@ -84,7 +87,7 @@ This gives us:
 
 ```bash
 # Clone
-git clone https://github.com/<your-user>/dice-battle
+git clone https://github.com/viktorhugo/dice-battle
 cd dice-battle
 
 # Install all JS deps across the workspace
@@ -181,16 +184,17 @@ The contract test suite includes:
 - **Cheatcodes** like `vm.prevrandao` to exercise randomness paths deterministically
 
 Run with:
+
 ```bash
 pnpm --filter contracts test:fuzz
 ```
 
 ## Deployed contracts
 
-| Network      | Address                       | Verification                                        |
-| ------------ | ----------------------------- | --------------------------------------------------- |
-| Celo mainnet | _to be filled after deploy_                          | [Celoscan](https://celoscan.io)                         |
-| Celo Sepolia | `0x5803454e1abE598Bd525a613bb5034b4aE192590`          | [Blockscout](https://celo-sepolia.blockscout.com/address/0x5803454e1abE598Bd525a613bb5034b4aE192590) |
+| Network | Address | Verification |
+| --- | --- | --- |
+| Celo mainnet | _to be filled after deploy_ | [Celoscan](https://celoscan.io) |
+| Celo Sepolia | `0x5803454e1abE598Bd525a613bb5034b4aE192590` | [Blockscout](https://celo-sepolia.blockscout.com/address/0x5803454e1abE598Bd525a613bb5034b4aE192590) |
 
 ## Why this belongs on MiniPay
 
