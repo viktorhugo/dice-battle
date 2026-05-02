@@ -1,8 +1,13 @@
 import path from 'path'
 
+// Domains added here allow webpack HMR (hot reload) through a tunnel.
+// Set TUNNEL_HOST=your-domain.tunnelmole.net (or ngrok domain) in .env.local
+const tunnelHost = process.env.TUNNEL_HOST;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  ...(tunnelHost && { allowedDevOrigins: [tunnelHost] }),
   // Turbopack (default in Next.js 16) handles Node built-in stubs natively.
   turbopack: {
     root: path.resolve(import.meta.dirname, '../../'),

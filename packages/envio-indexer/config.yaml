@@ -16,18 +16,19 @@ contracts:
       - event: RoomTied(uint256 indexed roomId, uint8 rollA, uint8 rollB)
 
 networks:
-- id: 44787  # Celo Sepolia (no HyperSync — uses RPC)
-  start_block: 23860807
-  rpc_config:
-    url: https://forno.celo-sepolia.celo-testnet.org
-  contracts:
-    - name: DiceBattle
-      address:
-        - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
 - id: 42220
   start_block: 65267000
   contracts:
   - name: DiceBattle
     address:
     - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
+
+# - id: 44787  # Celo Sepolia (no HyperSync — uses RPC)
+#   start_block: 23860807
+#   rpc_config:
+#     url: https://forno.celo-sepolia.celo-testnet.org
+#   contracts:
+#     - name: DiceBattle
+#       address:
+#         - 0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF
 
