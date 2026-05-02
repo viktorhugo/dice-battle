@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount, useConnect } from "wagmi";
+import { useConnection, useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { logger } from "@/lib/logger";
 
 /**
  * Detects if the dApp is running inside MiniPay.
@@ -15,9 +16,10 @@ import { injected } from "wagmi/connectors";
  */
 export function useMiniPay() {
   const [isMiniPay, setIsMiniPay] = useState(false);
+  const [hasInjected, setHasInjected] = useState(false);
   const [checked, setChecked] = useState(false);
-  const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
+  const { address, isConnected, status } = useConnection();
+  const { mutate: connect } = useConnect();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -29,15 +31,24 @@ export function useMiniPay() {
     const inMiniPay = Boolean(eth?.isMiniPay);
     setIsMiniPay(inMiniPay);
     setChecked(true);
+    setHasInjected(Boolean(eth));
 
-    // Auto-connect inside MiniPay — no wallet UI needed
-    if (inMiniPay && !isConnected) {
+    logger.log("[useMiniPay] ethereum:", Boolean(eth), "| isMiniPay:", inMiniPay, "| status:", status, "| address:", address);
+
+    // Auto-connect inside MiniPay only when truly disconnected.
+    // Avoid calling connect() during 'reconnecting' or 'connecting' —
+    // that would interrupt wagmi's own reconnect flow and cause a loop.
+    if (inMiniPay && status === "disconnected") {
+      logger.log("[useMiniPay] Iniciando auto-connect...");
       connect({ connector: injected() });
+    } else {
+      logger.log("[useMiniPay] Auto-connect omitido — status:", status);
     }
-  }, [connect, isConnected]);
+  }, [connect, status]);
 
   return {
     isMiniPay,
+    hasInjected,
     address,
     isConnected,
     checked,
