@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { decodeEventLog, formatUnits } from "viem";
+import { formatUnits } from "viem";
 import { usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { GAME_ADDRESS, GAME_DEPLOY_BLOCK } from "@/lib/constants";
+import { GAME_ADDRESS, GAME_DEPLOY_BLOCK, getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
@@ -17,7 +17,6 @@ type OpenRoom = {
   stake: bigint;
 };
 
-const CLOSED_EVENTS = new Set(["RoomJoined", "RoomResolved", "RoomTied", "RoomExpiredClaim", "RoomCancelled"]);
 
 export default function RoomsPage() {
   const publicClient = usePublicClient();
@@ -33,42 +32,28 @@ export default function RoomsPage() {
         const fromBlock = GAME_DEPLOY_BLOCK ?? 0n;
         logger.log("[rooms] Buscando salas — fromBlock:", fromBlock);
 
-        const logs = await publicClient.getLogs({
-          address: GAME_ADDRESS,
-          fromBlock,
-          toBlock: "latest",
-        });
+        const [createdLogs, joinedLogs, resolvedLogs, tiedLogs, expiredLogs, cancelledLogs] = await Promise.all([
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomCreated", fromBlock, toBlock: "latest" }),
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomJoined", fromBlock, toBlock: "latest" }),
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomResolved", fromBlock, toBlock: "latest" }),
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomTied", fromBlock, toBlock: "latest" }),
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomExpiredClaim", fromBlock, toBlock: "latest" }),
+          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomCancelled", fromBlock, toBlock: "latest" }),
+        ]);
 
-        logger.log("[rooms] Logs recibidos:", logs.length);
+        logger.log("[rooms] Logs recibidos — creadas:", createdLogs.length);
 
         const created = new Map<string, OpenRoom>();
+        for (const log of createdLogs) {
+          const { roomId, playerA, token, stake } = log.args;
+          if (roomId == null) continue;
+          created.set(roomId.toString(), { roomId, playerA: playerA!, token: token!, stake: stake! });
+        }
+
         const closed = new Set<string>();
-
-        for (const log of logs) {
-          try {
-            const decoded = decodeEventLog({ abi: DICE_BATTLE_ABI, data: log.data, topics: log.topics });
-            const id = (decoded.args as Record<string, unknown>).roomId?.toString();
-            if (!id) continue;
-
-            if (decoded.eventName === "RoomCreated") {
-              const args = decoded.args as {
-                roomId: bigint;
-                playerA: `0x${string}`;
-                token: `0x${string}`;
-                stake: bigint;
-              };
-              created.set(id, {
-                roomId: args.roomId,
-                playerA: args.playerA,
-                token: args.token,
-                stake: args.stake,
-              });
-            } else if (CLOSED_EVENTS.has(decoded.eventName)) {
-              closed.add(id);
-            }
-          } catch {
-            // log from another contract or unrecognised event
-          }
+        for (const log of [...joinedLogs, ...resolvedLogs, ...tiedLogs, ...expiredLogs, ...cancelledLogs]) {
+          const { roomId } = log.args;
+          if (roomId != null) closed.add(roomId.toString());
         }
 
         const open = [...created.entries()]
@@ -135,7 +120,7 @@ export default function RoomsPage() {
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
                   <span className="font-semibold text-white">
-                    {formatUnits(room.stake, 18)} {getTokenSymbol(room.token)}
+                    {formatUnits(room.stake, getTokenDecimals(room.token))} {getTokenSymbol(room.token)}
                   </span>
                   <span className="text-xs text-white/40">each player</span>
                 </div>

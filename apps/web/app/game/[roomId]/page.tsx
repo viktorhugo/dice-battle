@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { decodeEventLog, formatUnits, type Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { formatUnits, type Hex } from "viem";
+import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
-import { GAME_ADDRESS } from "@/lib/constants";
+import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
 import { getTokenSymbol } from "@/lib/utils";
 
-const REVEAL_WINDOW = 200n;
+const REVEAL_WINDOW = 900n;
 
 type Room = {
   playerA: `0x${string}`;
@@ -34,7 +34,7 @@ type Result = {
 
 export default function GamePage() {
   const params = useParams<{ roomId: string }>();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
 
@@ -48,12 +48,14 @@ export default function GamePage() {
 
   const refresh = useCallback(async () => {
     if (!publicClient || !params.roomId) return;
-    const r = (await publicClient.readContract({
-      address: GAME_ADDRESS,
-      abi: DICE_BATTLE_ABI,
-      functionName: "rooms",
-      args: [BigInt(params.roomId)],
-    })) as readonly [
+      const r = (
+        await publicClient.readContract({
+        address: GAME_ADDRESS,
+        abi: DICE_BATTLE_ABI,
+        functionName: "rooms",
+        args: [BigInt(params.roomId)],
+      })
+    ) as readonly [
       `0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number
     ];
     const updated: Room = {
@@ -74,60 +76,27 @@ export default function GamePage() {
     if (r[6] === 3 || r[6] === 4) {
       const roomId = BigInt(params.roomId);
       const fromBlock = r[4] > 0n ? r[4] : 0n;
-      const logs = await publicClient.getLogs({
-        address: GAME_ADDRESS,
-        fromBlock,
-        toBlock: latest,
-      });
-      for (const log of logs) {
-        try {
-          const decoded = decodeEventLog({
-            abi: DICE_BATTLE_ABI,
-            data: log.data,
-            topics: log.topics,
-          });
-          if (
-            decoded.eventName === "RoomResolved" &&
-            (decoded.args as { roomId: bigint }).roomId === roomId
-          ) {
-            const args = decoded.args as {
-              roomId: bigint;
-              winner: `0x${string}`;
-              rollA1: number;
-              rollA2: number;
-              rollB1: number;
-              rollB2: number;
-              payout: bigint;
-              fee: bigint;
-            };
-            setResult({ kind: "win", rollA1: args.rollA1, rollA2: args.rollA2, rollB1: args.rollB1, rollB2: args.rollB2, winner: args.winner, payout: args.payout });
-            return;
-          }
-          if (
-            decoded.eventName === "RoomTied" &&
-            (decoded.args as { roomId: bigint }).roomId === roomId
-          ) {
-            const args = decoded.args as { roomId: bigint; rollA1: number; rollA2: number; rollB1: number; rollB2: number };
-            setResult({ kind: "tie", rollA1: args.rollA1, rollA2: args.rollA2, rollB1: args.rollB1, rollB2: args.rollB2 });
-            return;
-          }
-          if (
-            decoded.eventName === "RoomExpiredClaim" &&
-            (decoded.args as { roomId: bigint }).roomId === roomId
-          ) {
-            setResult({ kind: "expired" });
-            return;
-          }
-          if (
-            decoded.eventName === "RoomCancelled" &&
-            (decoded.args as { roomId: bigint }).roomId === roomId
-          ) {
-            setResult({ kind: "expired" });
-            return;
-          }
-        } catch {
-          // not our event
-        }
+
+      const [resolvedLogs, tiedLogs, expiredLogs, cancelledLogs] = await Promise.all([
+        publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomResolved", args: { roomId }, fromBlock, toBlock: latest }),
+        publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomTied", args: { roomId }, fromBlock, toBlock: latest }),
+        publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomExpiredClaim", args: { roomId }, fromBlock, toBlock: latest }),
+        publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomCancelled", args: { roomId }, fromBlock, toBlock: latest }),
+      ]);
+
+      if (resolvedLogs.length > 0) {
+        const { rollA1, rollA2, rollB1, rollB2, winner, payout } = resolvedLogs[0].args;
+        setResult({ kind: "win", rollA1, rollA2, rollB1, rollB2, winner, payout });
+        return;
+      }
+      if (tiedLogs.length > 0) {
+        const { rollA1, rollA2, rollB1, rollB2 } = tiedLogs[0].args;
+        setResult({ kind: "tie", rollA1, rollA2, rollB1, rollB2 });
+        return;
+      }
+      if (expiredLogs.length > 0 || cancelledLogs.length > 0) {
+        setResult({ kind: "expired" });
+        return;
       }
     }
   }, [publicClient, params.roomId]);
@@ -161,6 +130,13 @@ export default function GamePage() {
       pollingRef.current = null;
     }
   }, [room?.state]);
+
+  const { data: tokenDecimals } = useReadContract({
+    address: room?.token,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+    query: { enabled: !!room?.token },
+  });
 
   const tokenSymbol = room ? getTokenSymbol(room.token) : "";
 
@@ -279,7 +255,7 @@ export default function GamePage() {
             <>
               <p className="text-2xl font-bold text-green-400">You won! 🎉</p>
               <p className="mt-1 font-mono text-sm text-white/80">
-                +{formatUnits(result.payout || 0n, 18)} {tokenSymbol}
+                +{formatUnits(result.payout || 0n, tokenDecimals ?? 18)} {tokenSymbol}
               </p>
             </>
           )}
@@ -287,7 +263,7 @@ export default function GamePage() {
             <>
               <p className="text-lg font-bold text-red-400">Better luck next time</p>
               <p className="mt-1 text-xs text-white/60">
-                Opponent took {formatUnits(result.payout || 0n, 18)} {tokenSymbol}
+                Opponent took {formatUnits(result.payout || 0n, tokenDecimals ?? 18)} {tokenSymbol}
               </p>
             </>
           )}

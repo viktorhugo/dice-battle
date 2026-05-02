@@ -26,6 +26,22 @@ export function getTokenAddress(key: TokenKey): Address {
   return (TOKENS as Record<TokenKey, Address>)[key];
 }
 
+const TOKEN_DECIMALS_MAP: Record<string, number> = {
+  // Mainnet
+  "0x765de816845861e75a25fca122bb6898b8b1282a": 18, // cUSD
+  "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e": 6,  // USDT
+  "0xceba9300f2b948710d2653dd7b07f33a8b32118c": 6,  // USDC
+  // Sepolia
+  "0xde9e4c3ce781b4ba68120d6261cbad65ce0ab00b": 18, // cUSD
+  "0xd077a400968890eacc75cdc901f0356c943e4fdb": 6,  // USDT
+  "0x01c5c0122039549ad1493b8220cabedd739bc44e": 6,  // USDC
+  "0x4200000000000000000000000000000000000011": 18, // CELO
+};
+
+export function getTokenDecimals(tokenAddress: Address): number {
+  return TOKEN_DECIMALS_MAP[tokenAddress.toLowerCase()] ?? 18;
+}
+
 export const GAME_ADDRESS = (process.env.NEXT_PUBLIC_GAME_ADDRESS ||
   "0x0000000000000000000000000000000000000000") as Address;
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
@@ -24,7 +24,7 @@ const STATE_LABELS = ["None", "Open", "Matched", "Resolved", "Expired"];
 export default function JoinRoomPage() {
   const params = useParams<{ roomId: string }>();
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
 
@@ -159,6 +159,13 @@ export default function JoinRoomPage() {
     }
   }
 
+  const { data: tokenDecimals } = useReadContract({
+    address: room?.token,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+    query: { enabled: !!room?.token },
+  });
+
   if (loading) {
     return (
       <div className="flex flex-col gap-4 pt-10 text-center text-white/60">
@@ -202,7 +209,7 @@ export default function JoinRoomPage() {
         <div className="flex justify-between">
           <span className="text-white/60">Stake</span>
           <span className="font-mono text-white/80">
-            {formatUnits(room.stake, 18)} {tokenSymbol}
+            {formatUnits(room.stake, tokenDecimals ?? 18)} {tokenSymbol}
           </span>
         </div>
         <div className="flex justify-between">
@@ -240,7 +247,7 @@ export default function JoinRoomPage() {
           onClick={onJoin}
           className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
         >
-          {busy ? "Joining…" : `Match ${formatUnits(room.stake, 18)} ${tokenSymbol}`}
+          {busy ? "Joining…" : `Match ${formatUnits(room.stake, tokenDecimals ?? 18)} ${tokenSymbol}`}
         </button>
       )}
 

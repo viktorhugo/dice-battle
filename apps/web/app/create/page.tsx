@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { parseUnits, decodeEventLog } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { computeCommitment, generateSecret, storeSecret } from "@/lib/commitment";
@@ -27,7 +27,7 @@ const STAKE_PRESETS = [
 
 export default function CreateRoomPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
 
@@ -36,6 +36,28 @@ export default function CreateRoomPage() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "approving" | "creating" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
+  const tokenAddress = getTokenAddress(token);
+  const stakeValid = stake !== "" && !isNaN(Number(stake)) && Number(stake) > 0;
+
+  const { data: tokenDecimals } = useReadContract({
+    address: tokenAddress,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+  });
+
+  const { data: currentAllowance } = useReadContract({
+    address: tokenAddress,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: [address!, GAME_ADDRESS],
+    query: { enabled: !!address },
+  });
+
+  const allowanceReady =
+    stakeValid &&
+    tokenDecimals != null &&
+    currentAllowance != null &&
+    currentAllowance >= parseUnits(stake, tokenDecimals);
 
   async function onCreate() {
     logger.log("[onCreate] Iniciando creación de sala");
@@ -51,13 +73,21 @@ export default function CreateRoomPage() {
       setError("Contract address not configured. Set NEXT_PUBLIC_GAME_ADDRESS.");
       return;
     }
+    if (!stakeValid) {
+      setError("Enter a valid stake amount");
+      return;
+    }
+    if (tokenDecimals == null) {
+      setError("Could not read token decimals. Try again.");
+      return;
+    }
 
     setBusy(true);
     setError(null);
 
     try {
       const tokenAddress = getTokenAddress(token);
-      const stakeWei = parseUnits(stake, 18);
+      const stakeWei = parseUnits(stake, tokenDecimals);
       logger.log("[onCreate] Token address:", tokenAddress);
       logger.log("[onCreate] Stake en wei:", stakeWei.toString());
 
@@ -256,6 +286,11 @@ export default function CreateRoomPage() {
             {error}
           </div>
         )
+      }
+
+      {allowanceReady
+        ? "✓ Ready — confirm to play (1 tx)"
+        : `Approve ${stake} ${token} + Create (2 tx)`
       }
 
       <button
