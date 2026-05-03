@@ -6,10 +6,14 @@ import { useState } from "react";
 import { parseUnits, decodeEventLog } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
+import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { computeCommitment, generateSecret, storeSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS, getTokenAddress, TOKEN_KEYS, TokenKey } from "@/lib/constants";
+import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
+import { Spinner } from "@/components/ui/spinner"
+import { CheckCheck } from 'lucide-react';
 
 const GRID_COLS: Record<number, string> = {
   1: "grid-cols-1",
@@ -35,7 +39,8 @@ export default function CreateRoomPage() {
   const [stake, setStake] = useState("1");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "approving" | "creating" | "done">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorToast();
+  const [pendingRoom, setPendingRoom] = useState<{ roomId: string; secret: `0x${string}` } | null>(null);
   const tokenAddress = getTokenAddress(token);
   const stakeValid = stake !== "" && !isNaN(Number(stake)) && Number(stake) > 0;
 
@@ -45,7 +50,7 @@ export default function CreateRoomPage() {
     functionName: "decimals",
   });
 
-  const { data: currentAllowance } = useReadContract({
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
     address: tokenAddress,
     abi: ERC20_ABI,
     functionName: "allowance",
@@ -53,11 +58,14 @@ export default function CreateRoomPage() {
     query: { enabled: !!address },
   });
 
-  const allowanceReady =
-    stakeValid &&
-    tokenDecimals != null &&
-    currentAllowance != null &&
-    currentAllowance >= parseUnits(stake, tokenDecimals);
+  function isAllowanceReady(allowance: bigint | undefined) {
+    return stakeValid &&
+      tokenDecimals != null &&
+      allowance != null &&
+      allowance >= parseUnits(stake, tokenDecimals);
+  }
+
+  let allowanceReady = isAllowanceReady(currentAllowance);
 
   async function onCreate() {
     logger.log("[onCreate] Iniciando creación de sala");
@@ -83,7 +91,6 @@ export default function CreateRoomPage() {
     }
 
     setBusy(true);
-    setError(null);
 
     try {
       const tokenAddress = getTokenAddress(token);
@@ -115,7 +122,9 @@ export default function CreateRoomPage() {
         });
         logger.log("[onCreate] Tx approve enviada:", approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
-        logger.log("[onCreate] Approve confirmado");
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Espera extra para indexación (ajustar según red)
+        const { data: freshAllowance } = await refetchAllowance();
+        isAllowanceReady(freshAllowance)
       } else {
         logger.log("[onCreate] Allowance ya suficiente — se omite approve");
       }
@@ -174,14 +183,19 @@ export default function CreateRoomPage() {
       // 5. Persist secret locally (only on creator's device!)
       logger.log("[onCreate] [5/5] Guardando secreto en localStorage para roomId:", roomId.toString());
       storeSecret(roomId.toString(), secret);
-      logger.log("[onCreate] Secreto guardado. Redirigiendo a /join/" + roomId);
+      logger.log("[onCreate] Secreto guardado.");
 
       setStep("done");
-      router.push(`/join/${roomId}`);
+
+      // Show backup modal unless already seen for this room
+      if (hasSeenBackup(roomId.toString())) {
+        router.push(`/join/${roomId}`);
+      } else {
+        setPendingRoom({ roomId: roomId.toString(), secret });
+      }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      logger.error("[onCreate] Error:", msg);
-      setError(msg);
+      logger.error("[onCreate] Error:", e instanceof Error ? e.message : String(e));
+      setError(e);
       setStep("idle");
     } finally {
       setBusy(false);
@@ -191,6 +205,16 @@ export default function CreateRoomPage() {
   return (
     <div className="flex flex-col gap-6">
       <WalletBar />
+      
+      {
+        pendingRoom && (
+          <SecretBackupModal
+            roomId={pendingRoom.roomId}
+            secret={pendingRoom.secret}
+            onDismiss={() => router.push(`/join/${pendingRoom.roomId}`)}
+          />
+        )
+      }
 
       <header className="flex items-center justify-between pt-2">
         <Link href="/" className="text-sm text-white/60">
@@ -288,21 +312,49 @@ export default function CreateRoomPage() {
         )
       }
 
-      {allowanceReady
-        ? "✓ Ready — confirm to play (1 tx)"
-        : `Approve ${stake} ${token} + Create (2 tx)`
-      }
+      <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
+        allowanceReady
+          ? "border-green-500/20 bg-green-500/5 text-green-400"
+          : "border-white/10 bg-white/5 text-white/50"
+      }`}>
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-white/30"}`} />
+        {allowanceReady
+          ? "Ready — 1 transaction to confirm"
+          : `Needs approval + create — 2 transactions`}
+      </div>
 
       <button
         type="button"
-        disabled={!isConnected || busy}
+        disabled={!isConnected || busy || tokenDecimals == null}
         onClick={onCreate}
-        className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
       >
-        {step === "approving" && "Approving…"}
-        {step === "creating" && "Creating room…"}
-        {step === "done" && "Done!"}
-        {step === "idle" && (isConnected ? "Create and stake" : "Connect wallet")}
+        {
+          step === "approving" && (
+            <>
+              <Spinner /> Approving…
+            </>
+          )
+        }
+        {
+          step === "creating" && (
+            <>
+              <Spinner /> Creating room…
+            </>
+          )
+        }
+        {
+          step === "done" && (
+            <>
+              Done room created! <CheckCheck  />
+            </>
+          )
+        }
+        {step === "idle" && (
+          !isConnected ? "Connect wallet"
+          : tokenDecimals == null ? "Loading…"
+          : "Create and stake"
+        )}
       </button>
     </div>
   );

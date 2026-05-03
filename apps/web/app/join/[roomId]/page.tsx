@@ -9,6 +9,7 @@ import { WalletBar } from "@/components/WalletBar";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
+import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 
 type Room = {
@@ -31,7 +32,7 @@ export default function JoinRoomPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorToast();
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchRoom = useCallback(async () => {
@@ -65,9 +66,8 @@ export default function JoinRoomPage() {
         }
       })
       .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : String(e);
-        logger.error("[join] Error cargando sala:", msg);
-        setError(msg);
+        logger.error("[join] Error cargando sala:", e instanceof Error ? e.message : String(e));
+        setError(e);
       })
       .finally(() => setLoading(false));
   }, [fetchRoom, publicClient, params.roomId]);
@@ -151,9 +151,8 @@ export default function JoinRoomPage() {
       logger.log("[onJoin] Join exitoso — redirigiendo a /game/" + params.roomId);
       router.push(`/game/${params.roomId}`);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      logger.error("[onJoin] Error:", msg);
-      setError(msg);
+      logger.error("[onJoin] Error:", e instanceof Error ? e.message : String(e));
+      setError(e);
     } finally {
       setBusy(false);
     }

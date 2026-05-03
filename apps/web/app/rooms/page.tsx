@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { GAME_ADDRESS, GAME_DEPLOY_BLOCK, getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
@@ -86,7 +87,22 @@ export default function RoomsPage() {
       </header>
 
       {loading && (
-        <p className="pt-10 text-center text-sm text-white/50">Loading rooms…</p>
+        <ul className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
 
       {error && (

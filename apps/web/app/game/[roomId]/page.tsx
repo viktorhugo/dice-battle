@@ -6,10 +6,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits, type Hex } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
 import { getTokenSymbol } from "@/lib/utils";
+import { useErrorToast } from "@/hooks/useErrorToast";
 
 const REVEAL_WINDOW = 900n;
 
@@ -43,7 +45,7 @@ export default function GamePage() {
   const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useErrorToast();
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -169,7 +171,7 @@ export default function GamePage() {
       clearSecret(params.roomId);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -189,7 +191,7 @@ export default function GamePage() {
       await publicClient.waitForTransactionReceipt({ hash });
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -197,9 +199,34 @@ export default function GamePage() {
 
   if (loading || !room) {
     return (
-      <div className="flex flex-col gap-4 pt-10 text-center text-white/60">
+      <div className="flex flex-col gap-6">
         <WalletBar />
-        <p>Loading game…</p>
+        {/* Header */}
+        <div className="flex items-center justify-between pt-2">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-5 w-24" />
+          <div className="w-10" />
+        </div>
+        {/* Dice area */}
+        <div className="flex items-center justify-center gap-4 py-8">
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex gap-2">
+              <Skeleton className="h-16 w-16 rounded-2xl" />
+              <Skeleton className="h-16 w-16 rounded-2xl" />
+            </div>
+            <Skeleton className="h-3 w-10" />
+          </div>
+          <Skeleton className="h-6 w-6 rounded-full" />
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex gap-2">
+              <Skeleton className="h-16 w-16 rounded-2xl" />
+              <Skeleton className="h-16 w-16 rounded-2xl" />
+            </div>
+            <Skeleton className="h-3 w-10" />
+          </div>
+        </div>
+        {/* Action button */}
+        <Skeleton className="h-14 w-full rounded-2xl" />
       </div>
     );
   }

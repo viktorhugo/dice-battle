@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import ContextProvider from "./context/wagmi-provider";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Dice Battle 🎲",
@@ -18,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookies = headersObj.get("cookie");
 
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <head>
         <meta
           name="talentapp:project_verification"
