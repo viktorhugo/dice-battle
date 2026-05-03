@@ -1,19 +1,25 @@
-import { TOKENS } from "./constants";
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+import { TOKENS } from "@/lib/constants"
 
-export function truncateAddress(addr?: string): string {
-  if (!addr || addr.length < 10) return addr ?? "";
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
-export function getTokenSymbol(token: string): string {
-  const lower = token.toLowerCase();
-  for (const [key, addr] of Object.entries(TOKENS)) {
-    if (addr.toLowerCase() === lower) return key;
-  }
-  return "UNKNOWN";
+export function truncateAddress(address: string): string {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+const TOKEN_SYMBOL_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(TOKENS).map(([symbol, addr]) => [addr.toLowerCase(), symbol])
+);
+
+export function getTokenSymbol(tokenAddress: string): string {
+  return TOKEN_SYMBOL_MAP[tokenAddress.toLowerCase()] ?? "???";
 }
 
 export const NETWORK_LABEL: Record<string, string> = {
-  celo: "Celo mainnet",
+  celo: "Celo Mainnet",
   celo_sepolia: "Celo Sepolia",
 };
