@@ -1,3 +1,5 @@
+# ─── Raw event tables (one row per event) ───────────────────────────────────
+
 type DiceBattle_RoomCancelled {
   id: ID!
   roomId: BigInt!
@@ -46,3 +48,36 @@ type DiceBattle_RoomTied {
   rollB2: BigInt!
 }
 
+# ─── Aggregated entities ─────────────────────────────────────────────────────
+
+type Room {
+  id: ID!                 # roomId as string
+  state: String!          # OPEN | MATCHED | RESOLVED | TIED | EXPIRED | CANCELLED
+  playerA: String!
+  playerB: String
+  token: String!
+  stake: BigInt!
+  winner: String
+  rollA1: Int
+  rollA2: Int
+  rollB1: Int
+  rollB2: Int
+  createdAt: BigInt!
+  resolvedAt: BigInt
+  txCreate: String!
+  txResolve: String
+}
+
+type Player {
+  id: ID!                 # lowercase address
+  totalGames: BigInt!
+  wins: BigInt!
+  losses: BigInt!
+  ties: BigInt!
+  totalVolume: BigInt!
+  totalWon: BigInt!
+  totalLost: BigInt!
+  lastGameAt: BigInt!
+  currentStreak: BigInt!
+  longestStreak: BigInt!
+}

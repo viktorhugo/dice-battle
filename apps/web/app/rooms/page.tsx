@@ -3,76 +3,31 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
-import { usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { GAME_ADDRESS, GAME_DEPLOY_BLOCK, getTokenDecimals } from "@/lib/constants";
+import { getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
+import { getOpenRooms, type IndexerRoom } from "@/lib/indexer";
 import { logger } from "@/lib/logger";
 
-type OpenRoom = {
-  roomId: bigint;
-  playerA: `0x${string}`;
-  token: `0x${string}`;
-  stake: bigint;
-};
-
-
 export default function RoomsPage() {
-  const publicClient = usePublicClient();
-  const [rooms, setRooms] = useState<OpenRoom[]>([]);
+  const [rooms, setRooms] = useState<IndexerRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!publicClient) return;
-
-    (async () => {
-      try {
-        const fromBlock = GAME_DEPLOY_BLOCK ?? 0n;
-        logger.log("[rooms] Buscando salas — fromBlock:", fromBlock);
-
-        const [createdLogs, joinedLogs, resolvedLogs, tiedLogs, expiredLogs, cancelledLogs] = await Promise.all([
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomCreated", fromBlock, toBlock: "latest" }),
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomJoined", fromBlock, toBlock: "latest" }),
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomResolved", fromBlock, toBlock: "latest" }),
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomTied", fromBlock, toBlock: "latest" }),
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomExpiredClaim", fromBlock, toBlock: "latest" }),
-          publicClient.getContractEvents({ address: GAME_ADDRESS, abi: DICE_BATTLE_ABI, eventName: "RoomCancelled", fromBlock, toBlock: "latest" }),
-        ]);
-
-        logger.log("[rooms] Logs recibidos — creadas:", createdLogs.length);
-
-        const created = new Map<string, OpenRoom>();
-        for (const log of createdLogs) {
-          const { roomId, playerA, token, stake } = log.args;
-          if (roomId == null) continue;
-          created.set(roomId.toString(), { roomId, playerA: playerA!, token: token!, stake: stake! });
-        }
-
-        const closed = new Set<string>();
-        for (const log of [...joinedLogs, ...resolvedLogs, ...tiedLogs, ...expiredLogs, ...cancelledLogs]) {
-          const { roomId } = log.args;
-          if (roomId != null) closed.add(roomId.toString());
-        }
-
-        const open = [...created.entries()]
-          .filter(([id]) => !closed.has(id))
-          .map(([, room]) => room)
-          .reverse();
-
-        logger.log("[rooms] Salas creadas:", created.size, "| cerradas:", closed.size, "| abiertas:", open.length);
-        setRooms(open);
-      } catch (e) {
+    getOpenRooms()
+      .then((data) => {
+        logger.log("[rooms] Salas abiertas del indexer:", data.length);
+        setRooms(data);
+      })
+      .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
-        logger.error("[rooms] Error cargando salas:", msg);
+        logger.error("[rooms] Error consultando indexer:", msg);
         setError(msg);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [publicClient]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,26 +41,24 @@ export default function RoomsPage() {
         <div className="w-10" />
       </header>
 
-      {
-        loading && (
-          <ul className="flex flex-col gap-3">
-            {[0, 1, 2].map((i) => (
-              <li key={i}>
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-                  <div className="flex flex-col gap-1.5">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
+      {loading && (
+        <ul className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <li key={i}>
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-              </li>
-            ))}
-          </ul>
-        )
-      }
+                <div className="flex flex-col items-end gap-1.5">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
@@ -122,44 +75,40 @@ export default function RoomsPage() {
         </div>
       )}
 
-      {
-        !loading && rooms.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {rooms.map((room) => (
-              <li key={room.roomId.toString()}>
-                <Link
-                  href={`/join/${room.roomId}`}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 active:opacity-70"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs text-white/40">Room #{room.roomId.toString()}</span>
-                    <span className="font-mono text-xs text-white/60">
-                      {truncateAddress(room.playerA)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5">
-                    <span className="font-semibold text-white">
-                      {formatUnits(room.stake, getTokenDecimals(room.token))} {getTokenSymbol(room.token)}
-                    </span>
-                    <span className="text-xs text-white/40">each player</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )
-      }
+      {!loading && rooms.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {rooms.map((room) => (
+            <li key={room.id}>
+              <Link
+                href={`/join/${room.id}`}
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 active:opacity-70"
+              >
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-white/40">Room #{room.id}</span>
+                  <span className="font-mono text-xs text-white/60">
+                    {truncateAddress(room.playerA)}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="font-semibold text-white">
+                    {formatUnits(BigInt(room.stake), getTokenDecimals(room.token as `0x${string}`))} {getTokenSymbol(room.token)}
+                  </span>
+                  <span className="text-xs text-white/40">each player</span>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {
-        !loading && (
-          <Link
-            href="/create"
-            className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
-          >
-            Create a room
-          </Link>
-        )
-      }
+      {!loading && (
+        <Link
+          href="/create"
+          className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
+        >
+          Create a room
+        </Link>
+      )}
     </div>
   );
 }
