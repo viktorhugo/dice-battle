@@ -6,7 +6,7 @@
 
 :root {
   color-scheme: light dark;
-  --muted: 255 255 255 / 0.10;
+  --muted: rgba(255, 255, 255, 0.10);
 }
 
 html,

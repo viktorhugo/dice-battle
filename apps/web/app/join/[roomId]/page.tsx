@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
+import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, ROOM_STATE_LABEL } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
+import { Spinner } from "@/components/ui/spinner";
 
 type Room = {
   playerA: `0x${string}`;
@@ -21,7 +22,6 @@ type Room = {
   state: number;
 };
 
-const STATE_LABELS = ["None", "Open", "Matched", "Resolved", "Expired"];
 
 export default function JoinRoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -35,6 +35,30 @@ export default function JoinRoomPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useErrorToast();
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { data: tokenDecimals } = useReadContract({
+    address: room?.token,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+    query: { enabled: !!room?.token },
+  });
+
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
+    address: room?.token,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: [address!, GAME_ADDRESS],
+    query: { enabled: !!address && !!room?.token },
+  });
+
+  function isAllowanceReady(allowance: bigint | undefined) {
+    return room?.stake &&
+      tokenDecimals != null &&
+      allowance != null &&
+      allowance >= room?.stake;
+  }
+
+  let allowanceReady = isAllowanceReady(currentAllowance);
 
   const fetchRoom = useCallback(async () => {
     if (!publicClient || !params.roomId) return null;
@@ -75,7 +99,7 @@ export default function JoinRoomPage() {
 
   // Poll every 4s while state=Open so Player A sees when Player B joins
   useEffect(() => {
-    if (!room || room.state !== 1 || busy) return;
+    if (!room || room.state !== ROOM_STATE.OPEN || busy) return;
     logger.log("[join] Iniciando polling — esperando que alguien una la sala");
 
     pollingRef.current = setInterval(async () => {
@@ -86,10 +110,13 @@ export default function JoinRoomPage() {
           logger.log("[join] Estado cambió:", room.state, "→", updated.state);
         }
         setRoom(updated);
-        if (updated.state !== 1) {
+        if (updated.state !== ROOM_STATE.OPEN) {
           logger.log("[join] Sala ya no está Open — deteniendo polling");
           clearInterval(pollingRef.current!);
           pollingRef.current = null;
+          if (updated.state === ROOM_STATE.MATCHED) {
+            router.push(`/game/${params.roomId}`);
+          }
         }
       } catch {
         // ignore poll errors
@@ -105,7 +132,6 @@ export default function JoinRoomPage() {
     logger.log("[onJoin] Iniciando join — wallet:", address, "| roomId:", params.roomId);
     if (!address || !publicClient || !room) return;
     setBusy(true);
-    setError(null);
 
     try {
       // 1. Approve if needed
@@ -128,6 +154,9 @@ export default function JoinRoomPage() {
         });
         logger.log("[onJoin] Tx approve enviada:", approveHash);
         await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Espera extra para indexación (ajustar según red)
+        const { data: freshAllowance } = await refetchAllowance();
+        isAllowanceReady(freshAllowance)
         logger.log("[onJoin] Approve confirmado");
       } else {
         logger.log("[onJoin] Allowance suficiente — omitiendo approve");
@@ -158,13 +187,6 @@ export default function JoinRoomPage() {
       setBusy(false);
     }
   }
-
-  const { data: tokenDecimals } = useReadContract({
-    address: room?.token,
-    abi: ERC20_ABI,
-    functionName: "decimals",
-    query: { enabled: !!room?.token },
-  });
 
   if (loading) {
     return (
@@ -197,7 +219,7 @@ export default function JoinRoomPage() {
     );
   }
 
-  if (!room || room.state === 0) {
+  if (!room || room.state === ROOM_STATE.NONE) {
     return (
       <div className="flex flex-col gap-4">
         <WalletBar />
@@ -236,12 +258,12 @@ export default function JoinRoomPage() {
         </div>
         <div className="flex justify-between">
           <span className="text-white/60">State</span>
-          <span className="text-white/80">{STATE_LABELS[room.state]}</span>
+          <span className="text-white/80">{ROOM_STATE_LABEL[room.state]}</span>
         </div>
       </section>
 
       {/* Player A waiting for opponent */}
-      {room.state === 1 && isPlayerA && (
+      {room.state === ROOM_STATE.OPEN && isPlayerA && (
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
           <p>You created this room. Share the link with your opponent.</p>
           <p className="mt-1 text-xs text-white/40 animate-pulse">Waiting for someone to join…</p>
@@ -262,19 +284,36 @@ export default function JoinRoomPage() {
       )}
 
       {/* Player B can join */}
-      {room.state === 1 && !isPlayerA && (
-        <button
+      {room.state === ROOM_STATE.OPEN && !isPlayerA && (
+        <>
+          <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
+            allowanceReady
+              ? "border-green-500/20 bg-green-500/5 text-green-400"
+              : "border-white/10 bg-white/5 text-white/50"
+          }`}>
+            <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-white/30"}`} />
+            {allowanceReady ? "Ready — 1 transaction to confirm" : "Needs approval + join — 2 transactions"}
+          </div>
+          <button
           type="button"
           disabled={!isConnected || busy}
           onClick={onJoin}
-          className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
         >
-          {busy ? "Joining…" : `Match ${formatUnits(room.stake, tokenDecimals ?? 18)} ${tokenSymbol}`}
-        </button>
+          {
+            busy 
+              ? (
+                  <>
+                    <Spinner /> Joining…
+                  </>
+                )
+              : `Match ${formatUnits(room.stake, tokenDecimals ?? 18)} ${tokenSymbol}`}
+          </button>
+        </>
       )}
 
       {/* Room matched — go to game */}
-      {room.state === 2 && (
+      {room.state === ROOM_STATE.MATCHED && (
         <Link
           href={`/game/${params.roomId}`}
           className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
@@ -284,10 +323,10 @@ export default function JoinRoomPage() {
       )}
 
       {/* Game already finished */}
-      {(room.state === 3 || room.state === 4) && (
+      {(room.state === ROOM_STATE.RESOLVED || room.state === ROOM_STATE.EXPIRED) && (
         <div className="flex flex-col gap-3">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/60">
-            {room.state === 3
+            {room.state === ROOM_STATE.RESOLVED
               ? "This game has already been resolved."
               : "This game expired — host never revealed."}
             {(isPlayerA || isPlayerB) && (

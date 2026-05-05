@@ -86,24 +86,26 @@ export default function RoomsPage() {
         <div className="w-10" />
       </header>
 
-      {loading && (
-        <ul className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => (
-            <li key={i}>
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-                <div className="flex flex-col gap-1.5">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-3 w-24" />
+      {
+        loading && (
+          <ul className="flex flex-col gap-3">
+            {[0, 1, 2].map((i) => (
+              <li key={i}>
+                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+              </li>
+            ))}
+          </ul>
+        )
+      }
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
@@ -120,38 +122,44 @@ export default function RoomsPage() {
         </div>
       )}
 
-      {!loading && rooms.length > 0 && (
-        <ul className="flex flex-col gap-3">
-          {rooms.map((room) => (
-            <li key={room.roomId.toString()}>
-              <Link
-                href={`/join/${room.roomId}`}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 active:opacity-70"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs text-white/40">Room #{room.roomId.toString()}</span>
-                  <span className="font-mono text-xs text-white/60">
-                    {truncateAddress(room.playerA)}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end gap-0.5">
-                  <span className="font-semibold text-white">
-                    {formatUnits(room.stake, getTokenDecimals(room.token))} {getTokenSymbol(room.token)}
-                  </span>
-                  <span className="text-xs text-white/40">each player</span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {
+        !loading && rooms.length > 0 && (
+          <ul className="flex flex-col gap-3">
+            {rooms.map((room) => (
+              <li key={room.roomId.toString()}>
+                <Link
+                  href={`/join/${room.roomId}`}
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 active:opacity-70"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs text-white/40">Room #{room.roomId.toString()}</span>
+                    <span className="font-mono text-xs text-white/60">
+                      {truncateAddress(room.playerA)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="font-semibold text-white">
+                      {formatUnits(room.stake, getTokenDecimals(room.token))} {getTokenSymbol(room.token)}
+                    </span>
+                    <span className="text-xs text-white/40">each player</span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )
+      }
 
-      <Link
-        href="/create"
-        className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
-      >
-        Create a room
-      </Link>
+      {
+        !loading && (
+          <Link
+            href="/create"
+            className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
+          >
+            Create a room
+          </Link>
+        )
+      }
     </div>
   );
 }

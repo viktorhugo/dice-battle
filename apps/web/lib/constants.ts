@@ -42,6 +42,24 @@ export function getTokenDecimals(tokenAddress: Address): number {
   return TOKEN_DECIMALS_MAP[tokenAddress.toLowerCase()] ?? 18;
 }
 
+export const ROOM_STATE = {
+  NONE: 0,
+  OPEN: 1,
+  MATCHED: 2,
+  RESOLVED: 3,
+  EXPIRED: 4,
+} as const;
+
+export type RoomState = typeof ROOM_STATE[keyof typeof ROOM_STATE];
+
+export const ROOM_STATE_LABEL: Record<number, string> = {
+  0: "None",
+  1: "Open",
+  2: "Matched",
+  3: "Resolved",
+  4: "Expired",
+};
+
 export const GAME_ADDRESS = (process.env.NEXT_PUBLIC_GAME_ADDRESS ||
   "0x0000000000000000000000000000000000000000") as Address;
 

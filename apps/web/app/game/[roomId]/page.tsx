@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
-import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
+import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
 import { getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 
@@ -76,7 +76,7 @@ export default function GamePage() {
     setCurrentBlock(latest);
 
     // Fetch result events for Resolved (3) or Expired (4)
-    if (r[6] === 3 || r[6] === 4) {
+    if (r[6] === ROOM_STATE.RESOLVED || r[6] === ROOM_STATE.EXPIRED) {
       const roomId = BigInt(params.roomId);
       const fromBlock = r[4] > 0n ? r[4] : 0n;
 
@@ -111,7 +111,7 @@ export default function GamePage() {
 
   // Poll every 4s while Matched (state=2) so both players see result automatically
   useEffect(() => {
-    if (!room || room.state !== 2 || busy) return;
+    if (!room || room.state !== ROOM_STATE.MATCHED || busy) return;
 
     pollingRef.current = setInterval(async () => {
       try {
@@ -128,7 +128,7 @@ export default function GamePage() {
 
   // Stop polling once resolved/expired
   useEffect(() => {
-    if (room && room.state !== 2 && pollingRef.current) {
+    if (room && room.state !== ROOM_STATE.MATCHED && pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
@@ -289,7 +289,7 @@ export default function GamePage() {
       )}
 
       {/* Actions while Matched */}
-      {room.state === 2 && (
+      {room.state === ROOM_STATE.MATCHED && (
         <section className="flex flex-col gap-3">
           {isPlayerA && (
             <button
