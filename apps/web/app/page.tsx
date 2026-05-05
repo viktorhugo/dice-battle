@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WalletBar } from "@/components/WalletBar";
+import { Medal } from "lucide-react";
 
 export default function Home() {
   return (
@@ -28,6 +29,12 @@ export default function Home() {
           className="rounded-2xl border border-white/15 py-4 text-center font-semibold text-white active:opacity-80"
         >
           Browse open rooms
+        </Link>
+        <Link
+          href="/leaderboard"
+          className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 py-4 text-center font-semibold text-white/80 active:opacity-80"
+        >
+          <Medal />  Leaderboard
         </Link>
       </div>
 

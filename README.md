@@ -27,22 +27,41 @@ Dice Battle is a two-player dice battle where the escrow, the randomness, and th
 ```text
 dice-battle/
 ├── apps/
-│   └── web/                  # Next.js 16 frontend with wagmi + viem
-│       ├── app/              # App Router pages
-│       ├── components/       # UI components
-│       ├── config/           # Wagmi & Reown AppKit config
-│       ├── hooks/            # Custom hooks (useMiniPay)
-│       └── lib/              # Constants, ABI, commitment utils
+│   └── web/                        # Next.js 16 frontend with wagmi + viem
+│       ├── app/
+│       │   ├── page.tsx            # Home — create / browse / leaderboard
+│       │   ├── create/             # Create a room
+│       │   ├── join/[roomId]/      # Join a room (Player B flow)
+│       │   ├── game/[roomId]/      # Live game + reveal + results
+│       │   ├── rooms/              # Browse open rooms (indexer-powered)
+│       │   ├── profile/[address]/  # Player profile with stats & history
+│       │   └── leaderboard/        # Global leaderboard (Today/Week/All-time)
+│       ├── components/
+│       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile
+│       │   ├── game/               # DiceAnimation, DicePair, SecretBackupModal
+│       │   └── ui/                 # shadcn: Dialog, Skeleton, Spinner + Identicon
+│       ├── config/                 # Wagmi & Reown AppKit config
+│       ├── hooks/                  # useMiniPay, useErrorToast
+│       └── lib/
+│           ├── abi.ts              # DiceBattle ABI (auto-synced)
+│           ├── commitment.ts       # Secret generate / store / load / clear
+│           ├── constants.ts        # Addresses, ROOM_STATE, token decimals
+│           ├── indexer.ts          # GraphQL client + all indexer queries
+│           ├── logger.ts           # Dev-only logger
+│           └── utils.ts            # truncateAddress, getTokenSymbol, cn
 ├── packages/
-│   ├── contracts/            # Foundry project
-│   │   ├── src/              # DiceBattle.sol, MockERC20.sol
-│   │   ├── test/             # Full test suite with fuzzing
-│   │   └── script/           # Deploy.s.sol
-│   └── envio-indexer/        # Envio event indexer (optional)
+│   ├── contracts/                  # Foundry project
+│   │   ├── src/                    # DiceBattle.sol, MockERC20.sol
+│   │   ├── test/                   # Full test suite with fuzzing
+│   │   └── script/                 # Deploy.s.sol
+│   └── envio-indexer/              # Envio event indexer
+│       ├── config.yaml             # Network + contract + field_selection
+│       ├── schema.graphql          # Room + Player aggregates + raw event tables
+│       └── src/EventHandlers.ts    # State machine handlers per event
 ├── scripts/
-│   └── sync-abi.mjs          # Copies ABI from Foundry build → frontend
-├── .github/workflows/        # CI (contracts + web in parallel)
-├── package.json              # Root with pnpm workspaces
+│   └── sync-abi.mjs                # Copies ABI from Foundry build → frontend
+├── .github/workflows/              # CI (contracts + web in parallel)
+├── package.json                    # Root with pnpm workspaces
 └── pnpm-workspace.yaml
 ```
 
@@ -71,7 +90,11 @@ This gives us:
 - **Randomness:** `block.prevrandao` + commit-reveal binding
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript strict
 - **Onchain lib:** viem + wagmi (NOT ethers.js — incompatible with MiniPay)
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS v3 + shadcn/ui (Dialog, Skeleton)
+- **Animations:** Framer Motion (dice roll phases with spring settle)
+- **Indexer:** Envio — `Room` and `Player` aggregate entities over all game events
+- **GraphQL client:** `graphql-request` + typed queries in `lib/indexer.ts`
+- **Avatars:** `minidenticons` — deterministic SVG identicons, zero deps, SSR-safe
 - **Deployment:** Vercel (frontend), Celo mainnet (contract)
 - **CI/CD:** GitHub Actions with parallel jobs for contracts and web
 
@@ -123,8 +146,9 @@ pnpm build
 
 ### Envio indexer local dev
 
-The `packages/envio-indexer` package has a generated ReScript subpackage in `packages/envio-indexer/generated`.
-Before starting the indexer locally, build that generated package and install its dependencies:
+The indexer maintains two aggregate entities — `Room` (full state machine) and `Player` (leaderboard stats) — derived from on-chain events. The frontend reads from it via GraphQL (`lib/indexer.ts`).
+
+The `packages/envio-indexer` package has a generated ReScript subpackage. Build it first:
 
 ```bash
 cd packages/envio-indexer/generated
@@ -132,18 +156,34 @@ pnpm install --ignore-workspace
 pnpm build
 ```
 
-Then run the local indexer from the parent package:
+Then start the indexer:
 
 ```bash
 cd ../
 pnpm dev
+# GraphQL playground: http://localhost:8080/console  (password: testing)
+# GraphQL endpoint:   http://localhost:8080/v1/graphql
 ```
 
-If `envio dev` fails with `Cannot find module './src/db/Migrations.res.js'`, it usually means the generated package has not been built or its local `node_modules` are missing. In that case install the missing dependency as well:
+If `envio dev` fails with `Cannot find module './src/db/Migrations.res.js'`:
 
 ```bash
 cd packages/envio-indexer/generated
 pnpm install --ignore-workspace @envio-dev/hypersync-client
+```
+
+After changing `schema.graphql` or `config.yaml`, regenerate types and restart:
+
+```bash
+npx envio codegen   # re-generates types in generated/
+npx envio stop
+npx envio dev       # applies new schema migrations
+```
+
+Set `NEXT_PUBLIC_INDEXER_URL` in `apps/web/.env.local` to point the frontend at the indexer:
+
+```bash
+NEXT_PUBLIC_INDEXER_URL=http://localhost:8080/v1/graphql
 ```
 
 ### Deploying
