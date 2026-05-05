@@ -13,6 +13,8 @@ import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
+import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
+import { loadSecret } from "@/lib/commitment";
 
 type Room = {
   playerA: `0x${string}`;
@@ -34,6 +36,7 @@ export default function JoinRoomPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useErrorToast();
+  const [showBackup, setShowBackup] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: tokenDecimals } = useReadContract({
@@ -96,6 +99,15 @@ export default function JoinRoomPage() {
       })
       .finally(() => setLoading(false));
   }, [fetchRoom, publicClient, params.roomId]);
+
+  // Show backup modal for PlayerA if they haven't seen it and secret still exists
+  useEffect(() => {
+    if (!room || !address || loading) return;
+    const isA = address.toLowerCase() === room.playerA.toLowerCase();
+    if (isA && !hasSeenBackup(params.roomId) && !!loadSecret(params.roomId)) {
+      setShowBackup(true);
+    }
+  }, [room, address, loading, params.roomId]);
 
   // Poll every 4s while state=Open so Player A sees when Player B joins
   useEffect(() => {
@@ -185,6 +197,19 @@ export default function JoinRoomPage() {
       setError(e);
     } finally {
       setBusy(false);
+    }
+  }
+
+  if (showBackup) {
+    const secret = loadSecret(params.roomId);
+    if (secret) {
+      return (
+        <SecretBackupModal
+          roomId={params.roomId}
+          secret={secret}
+          onDismiss={() => setShowBackup(false)}
+        />
+      );
     }
   }
 
