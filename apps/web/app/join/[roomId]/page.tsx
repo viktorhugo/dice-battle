@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
@@ -167,9 +168,31 @@ export default function JoinRoomPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 pt-10 text-center text-white/60">
+      <div className="flex flex-col gap-6">
         <WalletBar />
-        <p>Loading room…</p>
+        {/* Header */}
+        <div className="flex items-center justify-between pt-2">
+          <Skeleton className="h-4 w-10" />
+          <Skeleton className="h-5 w-24" />
+          <div className="w-10" />
+        </div>
+        {/* Room info card */}
+        <div className="rounded-xl bg-white/5 p-4 flex flex-col gap-3">
+          <div className="flex justify-between">
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <div className="flex justify-between">
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <div className="flex justify-between">
+            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-14" />
+          </div>
+        </div>
+        {/* Action button */}
+        <Skeleton className="h-14 w-full rounded-2xl" />
       </div>
     );
   }

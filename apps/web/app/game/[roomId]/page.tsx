@@ -7,6 +7,7 @@ import { formatUnits, type Hex } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS } from "@/lib/constants";
@@ -248,25 +249,9 @@ export default function GamePage() {
 
       {/* Dice display — 2 dice per player */}
       <section className="flex items-center justify-center gap-4 py-8">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex gap-2">
-            <DieBox value={result?.rollA1} />
-            <DieBox value={result?.rollA2} />
-          </div>
-          <span className="text-xs uppercase tracking-wider text-white/50">
-            Host {result ? `(${(result.rollA1 ?? 0) + (result.rollA2 ?? 0)})` : ""}
-          </span>
-        </div>
+        <DicePair roll1={result?.rollA1} roll2={result?.rollA2} label="Host" delay={0} />
         <div className="text-2xl text-white/40">vs</div>
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex gap-2">
-            <DieBox value={result?.rollB1} />
-            <DieBox value={result?.rollB2} />
-          </div>
-          <span className="text-xs uppercase tracking-wider text-white/50">
-            Guest {result ? `(${(result.rollB1 ?? 0) + (result.rollB2 ?? 0)})` : ""}
-          </span>
-        </div>
+        <DicePair roll1={result?.rollB1} roll2={result?.rollB2} label="Guest" delay={200} />
       </section>
 
       {/* Outcome */}
@@ -355,14 +340,6 @@ export default function GamePage() {
           Play again
         </Link>
       )}
-    </div>
-  );
-}
-
-function DieBox({ value }: { value?: number }) {
-  return (
-    <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-3xl font-bold font-mono">
-      {value ?? "?"}
     </div>
   );
 }
