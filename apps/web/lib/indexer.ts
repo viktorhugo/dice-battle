@@ -3,7 +3,11 @@ import { GraphQLClient, gql } from "graphql-request";
 const ENDPOINT =
   process.env.NEXT_PUBLIC_INDEXER_URL || "http://localhost:8080/v1/graphql";
 
-export const indexer = new GraphQLClient(ENDPOINT);
+const ADMIN_SECRET = process.env.NEXT_PUBLIC_INDEXER_ADMIN_SECRET;
+
+export const indexer = new GraphQLClient(ENDPOINT, {
+  headers: ADMIN_SECRET ? { "x-hasura-admin-secret": ADMIN_SECRET } : {},
+});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +132,22 @@ const PLAYER_PROFILE_QUERY = gql`
   }
 `;
 
+const LIVE_STATS_QUERY = gql`
+  query LiveStats($since: numeric!) {
+    openRooms: Room_aggregate(where: { state: { _eq: "OPEN" } }) {
+      aggregate { count }
+    }
+    gamesToday: Room_aggregate(where: { createdAt: { _gte: $since } }) {
+      aggregate { count }
+    }
+    totalGames: Room_aggregate(
+      where: { state: { _in: ["RESOLVED", "TIED"] } }
+    ) {
+      aggregate { count }
+    }
+  }
+`;
+
 const LEADERBOARD_QUERY = gql`
   query Leaderboard($limit: Int!) {
     Player(limit: $limit, order_by: { wins: desc }) {
@@ -181,6 +201,26 @@ export async function getPlayerProfile(address: string): Promise<{
     Room: IndexerProfileRoom[];
   }>(PLAYER_PROFILE_QUERY, { id });
   return { player: data.Player_by_pk, rooms: data.Room };
+}
+
+export type LiveStats = {
+  openRooms: number;
+  gamesToday: number;
+  totalGames: number;
+};
+
+export async function getLiveStats(): Promise<LiveStats> {
+  const since = Math.floor(Date.now() / 1000) - 86_400;
+  const data = await indexer.request<{
+    openRooms: { aggregate: { count: number } };
+    gamesToday: { aggregate: { count: number } };
+    totalGames: { aggregate: { count: number } };
+  }>(LIVE_STATS_QUERY, { since: since.toString() });
+  return {
+    openRooms: data.openRooms.aggregate.count,
+    gamesToday: data.gamesToday.aggregate.count,
+    totalGames: data.totalGames.aggregate.count,
+  };
 }
 
 export async function getLeaderboardAllTime(limit = 50): Promise<LeaderboardEntry[]> {

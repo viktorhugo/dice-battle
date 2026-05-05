@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { WalletBar } from "@/components/WalletBar";
 import { Medal } from "lucide-react";
+import { WalletBar } from "@/components/WalletBar";
+import { LiveStats } from "@/components/social/LiveStats";
 
 export default function Home() {
   return (
@@ -17,7 +18,9 @@ export default function Home() {
         </p>
       </header>
 
-      <div className="grid gap-3 pt-6">
+      <LiveStats />
+
+      <div className="grid gap-3">
         <Link
           href="/create"
           className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
