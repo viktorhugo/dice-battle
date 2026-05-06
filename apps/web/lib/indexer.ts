@@ -94,6 +94,28 @@ const OPEN_ROOMS_QUERY = gql`
   }
 `;
 
+const OPEN_ROOMS_PAGE_QUERY = gql`
+  query OpenRoomsPage($limit: Int!, $offset: Int!) {
+    Room(
+      limit: $limit
+      offset: $offset
+      order_by: { createdAt: desc }
+      where: { state: { _eq: "OPEN" } }
+    ) {
+      id
+      playerA
+      token
+      stake
+      createdAt
+    }
+    Room_aggregate(where: { state: { _eq: "OPEN" } }) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 const PLAYER_PROFILE_QUERY = gql`
   query PlayerProfile($id: String!) {
     Player_by_pk(id: $id) {
@@ -189,6 +211,23 @@ export async function getOpenRooms(limit = 20): Promise<IndexerRoom[]> {
     { limit }
   );
   return data.Room;
+}
+
+export async function getOpenRoomsPage(
+  page: number,
+  pageSize = 10
+): Promise<{ rooms: IndexerRoom[]; total: number }> {
+  const data = await indexer.request<{
+    Room: IndexerRoom[];
+    Room_aggregate: { aggregate: { count: number } };
+  }>(OPEN_ROOMS_PAGE_QUERY, {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+  return {
+    rooms: data.Room,
+    total: data.Room_aggregate.aggregate.count,
+  };
 }
 
 export async function getPlayerProfile(address: string): Promise<{

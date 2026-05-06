@@ -29,16 +29,20 @@ dice-battle/
 ├── apps/
 │   └── web/                        # Next.js 16 frontend with wagmi + viem
 │       ├── app/
-│       │   ├── page.tsx            # Home — create / browse / leaderboard
+│       │   ├── page.tsx            # Home — create / browse / leaderboard + LiveStats
 │       │   ├── create/             # Create a room
 │       │   ├── join/[roomId]/      # Join a room (Player B flow)
-│       │   ├── game/[roomId]/      # Live game + reveal + results
+│       │   ├── game/[roomId]/      # Live game + reveal + results + Share button
+│       │   │   ├── layout.tsx      # generateMetadata with dynamic OG image
+│       │   │   └── page.tsx        # "use client" game UI
 │       │   ├── rooms/              # Browse open rooms (indexer-powered)
 │       │   ├── profile/[address]/  # Player profile with stats & history
-│       │   └── leaderboard/        # Global leaderboard (Today/Week/All-time)
+│       │   ├── leaderboard/        # Global leaderboard (Today/Week/All-time)
+│       │   └── api/og/[roomId]/    # Edge route — dynamic share card image
 │       ├── components/
 │       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile
 │       │   ├── game/               # DiceAnimation, DicePair, SecretBackupModal
+│       │   ├── social/             # LiveStats banner (open rooms, games today, all-time)
 │       │   └── ui/                 # shadcn: Dialog, Skeleton, Spinner + Identicon
 │       ├── config/                 # Wagmi & Reown AppKit config
 │       ├── hooks/                  # useMiniPay, useErrorToast
@@ -95,6 +99,7 @@ This gives us:
 - **Indexer:** Envio — `Room` and `Player` aggregate entities over all game events
 - **GraphQL client:** `graphql-request` + typed queries in `lib/indexer.ts`
 - **Avatars:** `minidenticons` — deterministic SVG identicons, zero deps, SSR-safe
+- **OG images:** `next/og` edge route at `/api/og/[roomId]` — dynamic share cards with dice results
 - **Deployment:** Vercel (frontend), Celo mainnet (contract)
 - **CI/CD:** GitHub Actions with parallel jobs for contracts and web
 

@@ -32,26 +32,32 @@
 ```
 apps/web/
 ├── app/
-│   ├── layout.tsx              # Layout raíz, max-w-md
-│   ├── page.tsx                # Home
+│   ├── layout.tsx              # Layout raíz, max-w-md, metadataBase
+│   ├── page.tsx                # Home + LiveStats banner
 │   ├── globals.css             # Tailwind + shadcn CSS vars
 │   ├── create/
 │   │   └── page.tsx            # Crear sala
 │   ├── join/[roomId]/
 │   │   └── page.tsx            # Unirse a sala (Player B)
 │   ├── game/[roomId]/
-│   │   └── page.tsx            # Vista del juego + reveal
+│   │   ├── layout.tsx          # generateMetadata con og:image dinámico
+│   │   └── page.tsx            # Vista del juego + reveal + Share button
 │   ├── rooms/
 │   │   └── page.tsx            # Salas abiertas (indexer)
 │   ├── profile/[address]/
 │   │   └── page.tsx            # Perfil de jugador (indexer)
-│   └── leaderboard/
-│       └── page.tsx            # Leaderboard global (indexer)
+│   ├── leaderboard/
+│   │   └── page.tsx            # Leaderboard global (indexer)
+│   └── api/
+│       └── og/[roomId]/
+│           └── route.tsx       # Edge route — Open Graph image dinámica
 ├── components/
 │   ├── WalletBar.tsx           # Estado de wallet + avatar → /profile
 │   ├── game/
 │   │   ├── DiceAnimation.tsx   # Animación de dados por fases (Framer Motion)
 │   │   └── SecretBackupModal.tsx # Modal de respaldo del secreto (shadcn Dialog)
+│   ├── social/
+│   │   └── LiveStats.tsx       # Banner de stats en vivo (indexer, refresh 30s)
 │   └── ui/
 │       ├── button.tsx          # shadcn Button
 │       ├── dialog.tsx          # shadcn Dialog
@@ -113,6 +119,11 @@ Detecta `window.ethereum.isMiniPay`. Si es verdadero, auto-conecta con el conect
 
 `app/page.tsx` — Links a `/create`, `/rooms`, `/leaderboard` + descripción de "How it works".
 
+Incluye el banner `<LiveStats />` que muestra en tiempo real (refresh cada 30s vía indexer):
+- **Open rooms** — salas con `state = OPEN`
+- **Games today** — partidas creadas en las últimas 24h
+- **All-time** — total de partidas resueltas/tied
+
 ### 4.2 Crear sala
 
 `app/create/page.tsx`
@@ -136,13 +147,30 @@ Detecta `window.ethereum.isMiniPay`. Si es verdadero, auto-conecta con el conect
 
 ### 4.4 Juego
 
-`app/game/[roomId]/page.tsx`
+`app/game/[roomId]/` tiene dos archivos:
 
+**`layout.tsx`** (server component) — exporta `generateMetadata` con Open Graph dinámico:
+```ts
+openGraph.images → ["/api/og/${roomId}"]  // OG image con dados y resultado
+twitter.card     → "summary_large_image"
+```
+Necesario porque `page.tsx` es "use client" y no puede exportar `generateMetadata`.
+
+**`page.tsx`** (client component):
 - Lee la sala del contrato con polling cada 3s
 - Muestra `DicePair` con animación cuando hay rolls disponibles
 - **Player A + MATCHED**: botón "Roll the dice" → llama `reveal(roomId, secret)` → limpia localStorage
 - **Player B + MATCHED**: espera y puede llamar `claimExpired` si superó la ventana de 200 bloques
 - Resultados: Won / Lost / Tied / Expired con colores y montos
+- Botones **"Share result"** + **"Play again"** al terminar el juego:
+  - Share usa `navigator.share` (nativo en MiniPay/mobile) con fallback a clipboard
+  - Comparte la URL `/game/[roomId]` que despliega la OG card en Farcaster, Twitter, etc.
+
+**`/api/og/[roomId]`** (Edge route) — genera imagen 1200×630 con `next/og`:
+- Muestra dados con highlight amarillo al ganador, totales por jugador, addresses truncadas
+- Estados: RESOLVED (dados + winner), TIED (dados), OPEN/MATCHED (placeholder), error (fallback genérico)
+- Prize calculado como `stake × 1.96` (2% fee)
+- `export const runtime = "edge"` — cold start ~0ms, desplegable en Vercel Edge Network
 
 ### 4.5 Salas abiertas
 

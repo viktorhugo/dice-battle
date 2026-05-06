@@ -46,6 +46,7 @@ export default function GamePage() {
   const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [shared, setShared] = useState(false);
   const [error, setError] = useErrorToast();
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -333,12 +334,31 @@ export default function GamePage() {
       )}
 
       {result && (
-        <Link
-          href="/create"
-          className="rounded-2xl border border-white/15 py-4 text-center font-semibold text-white active:opacity-80"
-        >
-          Play again
-        </Link>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const url = `${window.location.origin}/game/${params.roomId}`;
+              if (navigator.share) {
+                navigator.share({ url, title: `Dice Battle #${params.roomId}` }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url).then(() => {
+                  setShared(true);
+                  setTimeout(() => setShared(false), 2000);
+                });
+              }
+            }}
+            className="flex-1 rounded-2xl border border-white/15 py-4 text-center font-semibold text-white/80 active:opacity-80"
+          >
+            {shared ? "✓ Copied!" : "Share result"}
+          </button>
+          <Link
+            href="/create"
+            className="flex-1 rounded-2xl border border-white/15 py-4 text-center font-semibold text-white active:opacity-80"
+          >
+            Play again
+          </Link>
+        </div>
       )}
     </div>
   );

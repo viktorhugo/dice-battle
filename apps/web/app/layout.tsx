@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000"),
   title: "Dice Battle 🎲",
   description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
   openGraph: {
     title: "Dice Battle 🎲",
     description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
     type: "website",
-  }
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
