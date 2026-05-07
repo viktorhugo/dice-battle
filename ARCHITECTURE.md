@@ -59,9 +59,10 @@ apps/web/
 │   ├── social/
 │   │   └── LiveStats.tsx       # Banner de stats en vivo (indexer, refresh 30s)
 │   └── ui/
-│       ├── button.tsx          # shadcn Button
+│       ├── button.tsx          # shadcn Button + buttonVariants
 │       ├── dialog.tsx          # shadcn Dialog
 │       ├── identicon.tsx       # Avatar SVG determinístico (minidenticons)
+│       ├── pagination.tsx      # shadcn Pagination (prev/next, página activa, ellipsis)
 │       ├── skeleton.tsx        # shadcn Skeleton
 │       └── spinner.tsx         # Spinner de carga
 ├── config/
@@ -176,7 +177,11 @@ Necesario porque `page.tsx` es "use client" y no puede exportar `generateMetadat
 
 `app/rooms/page.tsx`
 
-Query al indexer: `Room(where: { state: { _eq: "OPEN" } }, order_by: { createdAt: desc })`. Cada fila linkea a `/join/[id]`. Skeleton durante carga.
+Query paginada al indexer: `getOpenRoomsPage(page, PAGE_SIZE=10)` — devuelve la página actual + total para calcular el número de páginas. Cada fila linkea a `/join/[id]`. Skeleton durante carga.
+
+- **Paginación**: componente `<Pagination>` de shadcn con prev/next, números de página y ellipsis. Al cambiar de página hace scroll al top automáticamente.
+- **Botón fijo**: "Create a room" anclado al bottom con gradiente `from-[#0C0C0C]` para no tapar contenido, limitado a `max-w-sm` en pantallas grandes.
+- **Contador**: total de salas abiertas como subtítulo del header ("N available").
 
 ### 4.6 Perfil de jugador
 
@@ -191,6 +196,7 @@ Secciones:
 - **OutcomeBar**: barra proporcional verde/rojo/amarillo (W/L/T)
 - **Dice stats**: avg die, mejor mano, número de la suerte — calculados de los rolls en el historial
 - **Duración promedio** de partida (`resolvedAt - createdAt`)
+- **Achievements**: grid 3 columnas con los 13 logros (ver §8 `lib/achievements.ts`)
 - **Historial reciente**: cada fila linkea a `/game/[id]`
 
 ### 4.7 Leaderboard
@@ -226,6 +232,10 @@ Cada fila: medalla 🥇🥈🥉 o número, `Identicon` 28px, dirección truncada
 ### `Identicon`
 
 `components/ui/identicon.tsx` — usa `minidenticons` para generar un SVG determinístico a partir de la dirección. SSR-safe, cero dependencias de canvas. Usado en `WalletBar`, perfil y leaderboard.
+
+### `Pagination`
+
+`components/ui/pagination.tsx` — componente shadcn-style construido sobre `buttonVariants`. Exporta `Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext` y `PaginationEllipsis`. Usa `<button>` en lugar de `<a>` para manejar estado client-side sin navegación de URL. Actualmente usado en `/rooms`.
 
 ---
 
@@ -302,10 +312,12 @@ Cada evento actualiza tanto la entidad `Room` como los `Player` involucrados:
 
 | Función | Query | Usado en |
 |---------|-------|----------|
-| `getOpenRooms(limit)` | `Room(where: state=OPEN, order: createdAt desc)` | `/rooms` |
+| `getOpenRooms(limit)` | `Room(where: state=OPEN, order: createdAt desc)` | interno |
+| `getOpenRoomsPage(page, pageSize)` | `Room(limit, offset) + Room_aggregate` → `{ rooms, total }` | `/rooms` |
 | `getPlayerProfile(address)` | `Player_by_pk` + `Room` (últimas 10) | `/profile/[address]` |
 | `getLeaderboardAllTime(limit)` | `Player(order: wins desc)` | `/leaderboard` All-time |
 | `getLeaderboardPeriod(since)` | `Room(where: resolvedAt >= since)` → agrega en cliente | `/leaderboard` Today/Week |
+| `getLiveStats()` | `Room_aggregate` × 3 (open, today, all-time) | Home `LiveStats` |
 
 ---
 
@@ -325,6 +337,52 @@ Cada evento actualiza tanto la entidad `Room` como los `Player` involucrados:
 - `truncateAddress(address)` — `0x1234…5678`
 - `getTokenSymbol(tokenAddress)` — dirección → símbolo ("cUSD", "USDT"…)
 - `NETWORK_LABEL` — `{ celo: "Celo Mainnet", celo_sepolia: "Celo Sepolia" }`
+
+### `lib/achievements.ts`
+
+Sistema de logros completamente del lado del cliente — sin queries adicionales al indexer.
+
+**Tipos exportados:**
+
+```ts
+type Rarity = "common" | "rare" | "epic" | "legendary";
+
+type PlayerStats = {
+  wins: number; losses: number; ties: number; totalGames: number;
+  longestStreak: number; currentStreak: number;
+  maxRoll: number;      // mejor suma de mano (máx 12)
+  minRoll: number;      // peor suma de mano (mín 2)
+  maxStakeUSD: number;  // stake más alto normalizado a USD (soporta 6 y 18 decimales)
+  comebackWin: boolean; // ganó tras 3+ derrotas consecutivas
+};
+
+type Achievement = {
+  id: string; name: string; description: string; emoji: string; rarity: Rarity;
+  check: (p: PlayerStats) => boolean;
+  progress?: (p: PlayerStats) => { value: number; max: number };
+};
+```
+
+**13 achievements en 4 categorías:**
+
+| Categoría | ID | Rarity |
+|-----------|-----|--------|
+| Wins | first-win, 5-wins, 25-wins, 100-wins | common → legendary |
+| Dice | lucky-12, snake-eyes | rare |
+| Streaks | hat-trick, hot-streak, unstoppable | common → legendary |
+| Special | comeback, whale, veteran, pacifist | epic / rare / common |
+
+**Funciones exportadas:**
+
+- `buildPlayerStats(player, rooms, address)` — función pura que deriva `PlayerStats` de los datos del indexer. Normaliza stakes por decimales de token. Detecta comebacks escaneando el historial de partidas.
+- `sortedAchievements(stats)` — devuelve los achievements ordenados: desbloqueados primero, luego por rarity descendente (legendary → epic → rare → common).
+
+**Visualización en `/profile/[address]`:**
+
+Grid 3 columnas de `AchievementCard`:
+- **Desbloqueado**: color por rarity (yellow=legendary, purple=epic, blue=rare, blanco=common) + barra de progreso amarilla para los cuantificables.
+- **Bloqueado**: grayscale + opacity-40 + 🔒 en esquina. Los cuantificables muestran `value/max` para que el jugador sepa qué le falta.
+- **Descripción**: siempre visible como texto tiny + atributo `title` para hover en desktop.
 
 ---
 

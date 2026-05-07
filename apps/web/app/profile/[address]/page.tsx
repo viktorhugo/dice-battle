@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { getPlayerProfile, type IndexerPlayer, type IndexerProfileRoom } from "@/lib/indexer";
+import { ACHIEVEMENTS, buildPlayerStats, sortedAchievements, type Achievement, type PlayerStats, type Rarity } from "@/lib/achievements";
 import { logger } from "@/lib/logger";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -125,6 +126,68 @@ function GameRow({ room, address }: { room: IndexerProfileRoom; address: string 
   );
 }
 
+// ─── Achievements ─────────────────────────────────────────────────────────────
+
+const RARITY_STYLES: Record<Rarity, string> = {
+  common:    "border-white/15 bg-white/5",
+  rare:      "border-blue-500/30 bg-blue-500/5",
+  epic:      "border-purple-500/40 bg-purple-500/5",
+  legendary: "border-yellow-500/50 bg-yellow-500/5",
+};
+
+function AchievementCard({
+  achievement,
+  unlocked,
+  stats,
+}: {
+  achievement: Achievement;
+  unlocked: boolean;
+  stats: PlayerStats;
+}) {
+  const prog = achievement.progress?.(stats);
+  const progressPct = prog ? (prog.value / prog.max) * 100 : null;
+
+  return (
+    <div
+      title={achievement.description}
+      className={[
+        "relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all",
+        unlocked ? RARITY_STYLES[achievement.rarity] : "border-white/8 bg-white/3 opacity-40 grayscale",
+      ].join(" ")}
+    >
+      {/* Lock indicator */}
+      {!unlocked && (
+        <span className="absolute right-1.5 top-1.5 text-[9px] leading-none">🔒</span>
+      )}
+
+      <span className="text-2xl leading-none">{achievement.emoji}</span>
+      <span className="line-clamp-1 text-[10px] font-semibold text-white">
+        {achievement.name}
+      </span>
+      <span className="line-clamp-2 text-[9px] leading-tight text-white/40">
+        {achievement.description}
+      </span>
+
+      {/* Progress bar */}
+      {progressPct !== null && (
+        <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-celo-yellow transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
+
+      {/* Progress label for locked + quantifiable */}
+      {!unlocked && prog && (
+        <span className="text-[9px] text-white/30">
+          {prog.value}/{prog.max}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -164,6 +227,10 @@ export default function ProfilePage() {
 
   const diceStats = computeDiceStats(rooms, address);
   const avgDuration = computeAvgDuration(rooms);
+
+  const playerStats = player ? buildPlayerStats(player, rooms, address) : null;
+  const achievementList = playerStats ? sortedAchievements(playerStats) : null;
+  const unlockedCount = achievementList?.filter((a) => a.unlocked).length ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -263,6 +330,28 @@ export default function ProfilePage() {
             </p>
           )}
         </div>
+      )}
+
+      {/* Achievements */}
+      {!loading && achievementList && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white/60">Achievements</h2>
+            <span className="text-xs text-white/30">
+              {unlockedCount}/{ACHIEVEMENTS.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {achievementList.map(({ achievement, unlocked }) => (
+              <AchievementCard
+                key={achievement.id}
+                achievement={achievement}
+                unlocked={unlocked}
+                stats={playerStats!}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Recent games */}
