@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { minidenticon } from "minidenticons";
+import { useEffect, useState } from "react";
 
 export function Identicon({
   address,
@@ -12,13 +11,27 @@ export function Identicon({
   size?: number;
   className?: string;
 }) {
-  const svg = useMemo(
-    () => minidenticon(address.toLowerCase(), 95, 45),
-    [address]
-  );
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    import("minidenticons").then(({ minidenticon }) => {
+      const svg = minidenticon(address.toLowerCase(), 95, 45);
+      setSrc(`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`);
+    });
+  }, [address]);
+
+  if (!src) {
+    return (
+      <span
+        style={{ width: size, height: size }}
+        className={`inline-block rounded-full bg-white/5 ${className}`}
+      />
+    );
+  }
+
   return (
     <img
-      src={`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`}
+      src={src}
       alt=""
       width={size}
       height={size}
