@@ -63,6 +63,9 @@ export const ROOM_STATE_LABEL: Record<number, string> = {
 export const GAME_ADDRESS = (process.env.NEXT_PUBLIC_GAME_ADDRESS ||
   "0x0000000000000000000000000000000000000000") as Address;
 
+export const TOURNAMENT_ADDRESS = (process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS ||
+  "0x0000000000000000000000000000000000000000") as Address;
+
 export const GAME_DEPLOY_BLOCK: bigint =
   NETWORK === "celo_sepolia"
     ? 23_860_807n
