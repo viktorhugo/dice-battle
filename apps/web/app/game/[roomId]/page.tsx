@@ -21,7 +21,7 @@ import { getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 
-const REVEAL_WINDOW = 900n;
+const REVEAL_WINDOW = 200n;
 
 type Room = {
   playerA: `0x${string}`;

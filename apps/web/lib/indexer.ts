@@ -108,10 +108,8 @@ const OPEN_ROOMS_PAGE_QUERY = gql`
       stake
       createdAt
     }
-    Room_aggregate(where: { state: { _eq: "OPEN" } }) {
-      aggregate {
-        count
-      }
+    allOpen: Room(where: { state: { _eq: "OPEN" } }, limit: 500) {
+      id
     }
   }
 `;
@@ -156,16 +154,17 @@ const PLAYER_PROFILE_QUERY = gql`
 
 const LIVE_STATS_QUERY = gql`
   query LiveStats($since: numeric!) {
-    openRooms: Room_aggregate(where: { state: { _eq: "OPEN" } }) {
-      aggregate { count }
+    openRooms: Room(where: { state: { _eq: "OPEN" } }, limit: 500) {
+      id
     }
-    gamesToday: Room_aggregate(where: { createdAt: { _gte: $since } }) {
-      aggregate { count }
+    gamesToday: Room(where: { createdAt: { _gte: $since } }, limit: 500) {
+      id
     }
-    totalGames: Room_aggregate(
+    totalGames: Room(
       where: { state: { _in: ["RESOLVED", "TIED"] } }
+      limit: 9999
     ) {
-      aggregate { count }
+      id
     }
   }
 `;
@@ -219,14 +218,14 @@ export async function getOpenRoomsPage(
 ): Promise<{ rooms: IndexerRoom[]; total: number }> {
   const data = await indexer.request<{
     Room: IndexerRoom[];
-    Room_aggregate: { aggregate: { count: number } };
+    allOpen: { id: string }[];
   }>(OPEN_ROOMS_PAGE_QUERY, {
     limit: pageSize,
     offset: (page - 1) * pageSize,
   });
   return {
     rooms: data.Room,
-    total: data.Room_aggregate.aggregate.count,
+    total: data.allOpen.length,
   };
 }
 
@@ -251,14 +250,14 @@ export type LiveStats = {
 export async function getLiveStats(): Promise<LiveStats> {
   const since = Math.floor(Date.now() / 1000) - 86_400;
   const data = await indexer.request<{
-    openRooms: { aggregate: { count: number } };
-    gamesToday: { aggregate: { count: number } };
-    totalGames: { aggregate: { count: number } };
+    openRooms: { id: string }[];
+    gamesToday: { id: string }[];
+    totalGames: { id: string }[];
   }>(LIVE_STATS_QUERY, { since: since.toString() });
   return {
-    openRooms: data.openRooms.aggregate.count,
-    gamesToday: data.gamesToday.aggregate.count,
-    totalGames: data.totalGames.aggregate.count,
+    openRooms: data.openRooms.length,
+    gamesToday: data.gamesToday.length,
+    totalGames: data.totalGames.length,
   };
 }
 

@@ -38,6 +38,7 @@ dice-battle/
 │       │   ├── rooms/              # Browse open rooms — paginated (10/page) + fixed CTA
 │       │   ├── profile/[address]/  # Player profile with stats, achievements & history
 │       │   ├── leaderboard/        # Global leaderboard (Today/Week/All-time)
+│       │   ├── tournament/         # Daily tournament — pool, countdown, leaderboard, quick play
 │       │   └── api/og/[roomId]/    # Edge route — dynamic share card image
 │       ├── components/
 │       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile
@@ -50,15 +51,16 @@ dice-battle/
 │           ├── abi.ts              # DiceBattle ABI (auto-synced)
 │           ├── achievements.ts     # 13 achievements — PlayerStats, buildPlayerStats, ACHIEVEMENTS
 │           ├── commitment.ts       # Secret generate / store / load / clear
-│           ├── constants.ts        # Addresses, ROOM_STATE, token decimals
-│           ├── indexer.ts          # GraphQL client + all indexer queries
+│           ├── constants.ts        # Addresses, ROOM_STATE, token decimals, TOURNAMENT_ADDRESS
+│           ├── indexer.ts          # GraphQL client + 9 typed queries (stats, H2H, leaderboard…)
 │           ├── logger.ts           # Dev-only logger
-│           └── utils.ts            # truncateAddress, getTokenSymbol, cn
+│           └── utils.ts            # truncateAddress, getTokenSymbol, timeAgo, cn
 ├── packages/
 │   ├── contracts/                  # Foundry project
-│   │   ├── src/                    # DiceBattle.sol, MockERC20.sol
+│   │   ├── src/                    # DiceBattle.sol, DailyTournament.sol, MockERC20.sol
 │   │   ├── test/                   # Full test suite with fuzzing
-│   │   └── script/                 # Deploy.s.sol
+│   │   ├── script/                 # Deploy.s.sol, DeployTournament.s.sol
+│   │   └── docs/                   # Deploy guides
 │   └── envio-indexer/              # Envio event indexer
 │       ├── config.yaml             # Network + contract + field_selection
 │       ├── schema.graphql          # Room + Player aggregates + raw event tables
@@ -86,7 +88,7 @@ This gives us:
 - **Player B cannot influence the outcome** (A's commitment was locked before B joined).
 - **The block proposer has at most 1 bit of influence** — acceptable for micro-stakes (max 5 USDT). For high-stakes games, a VRF oracle would be needed.
 
-**Grief protection:** if Player A stalls on reveal, Player B can claim the full pot after a 200-block window via `claimExpired`.
+**Grief protection:** if Player A stalls on reveal, Player B can claim the full pot after a **200-block** window (~16 min on Celo) via `claimExpired`. Both players see a live block countdown in the game UI.
 
 ## Tech stack
 
@@ -190,7 +192,10 @@ Set `NEXT_PUBLIC_INDEXER_URL` in `apps/web/.env.local` to point the frontend at 
 
 ```bash
 NEXT_PUBLIC_INDEXER_URL=http://localhost:8080/v1/graphql
+NEXT_PUBLIC_INDEXER_ADMIN_SECRET=testing
 ```
+
+The hosted Envio indexer (production) is deployed from the `envio` branch. Only push to `envio` when you want to redeploy the indexer — pushes to `master` do not trigger it.
 
 ### Deploying
 
@@ -206,7 +211,17 @@ pnpm deploy:sepolia   # Celo Sepolia
 pnpm deploy:mainnet   # Celo mainnet
 ```
 
-After each deploy, update `apps/web/.env.local` with the new `NEXT_PUBLIC_GAME_ADDRESS`.
+After each deploy, update `apps/web/.env.local` with the new contract address.
+
+To deploy the **DailyTournament** contract (daily prize pool):
+
+```bash
+cd packages/contracts
+make deploy-tournament-sepolia   # Celo Sepolia
+make deploy-tournament-mainnet   # Celo mainnet
+```
+
+After deploying, set `NEXT_PUBLIC_TOURNAMENT_ADDRESS` in your env and call `fundDay(dayId, amount)` to seed the first prize pool.
 
 ### Running in MiniPay
 
@@ -237,10 +252,19 @@ pnpm --filter contracts test:fuzz
 
 ## Deployed contracts
 
+### DiceBattle
+
 | Network | Address | Verification |
 | --- | --- | --- |
-| Celo mainnet | _to be filled after deploy_ | [Celoscan](https://celoscan.io) |
-| Celo Sepolia | `0x5803454e1abE598Bd525a613bb5034b4aE192590` | [Blockscout](https://celo-sepolia.blockscout.com/address/0x5803454e1abE598Bd525a613bb5034b4aE192590) |
+| Celo mainnet | `0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF` | [Celoscan](https://celoscan.io/address/0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF) |
+| Celo Sepolia | `0x5803454e1abE598Bd525a613bb5034b4aE192590` | [Celoscan Sepolia](https://sepolia.celoscan.io/address/0x5803454e1abE598Bd525a613bb5034b4aE192590) |
+
+### DailyTournament
+
+| Network | Address | Verification |
+| --- | --- | --- |
+| Celo mainnet | `0xCF373EaA7A041F12d84b6EF0B34C6B63ECb8E22F` | [Celoscan](https://celoscan.io/address/0xCF373EaA7A041F12d84b6EF0B34C6B63ECb8E22F) |
+| Celo Sepolia | `0x8978E35d0755b082C7a77A5FF34dBdE477372915` | [Celoscan Sepolia](https://sepolia.celoscan.io/address/0x8978E35d0755b082C7a77A5FF34dBdE477372915) |
 
 ## Why this belongs on MiniPay
 
