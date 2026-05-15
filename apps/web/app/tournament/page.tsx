@@ -222,8 +222,8 @@ export default function TournamentPage() {
     }
   }
 
-  const pool = todayInfo ? Number(todayInfo.pool) / 1e6 : null;
-  const yesterday = yesterdayInfo?.finalized ? yesterdayInfo : null;
+  const pool = todayInfo ? Number(todayInfo[0]) / 1e6 : null;
+  const yesterday = yesterdayInfo?.[1] ? yesterdayInfo : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -334,7 +334,7 @@ export default function TournamentPage() {
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-white/60">Yesterday&apos;s winners</h2>
           <ul className="flex flex-col gap-2">
-            {(yesterday.top as readonly Address[]).map((addr, i) =>
+            {(yesterday[2] as readonly Address[]).map((addr, i) =>
               addr !== ZERO_ADDRESS ? (
                 <li key={addr}>
                   <Link
@@ -348,9 +348,7 @@ export default function TournamentPage() {
                     </span>
                     <span className="font-mono text-sm font-semibold text-green-400">
                       won{" "}
-                      {(
-                        Number((yesterday.prizes as readonly bigint[])[i]) / 1e6
-                      ).toFixed(2)}{" "}
+                      {(Number((yesterday[4] as readonly bigint[])[i]) / 1e6).toFixed(2)}{" "}
                       USDT
                     </span>
                   </Link>

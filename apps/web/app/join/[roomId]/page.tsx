@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, ROOM_STATE_LABEL } from "@/lib/constants";
-import { truncateAddress, getTokenSymbol } from "@/lib/utils";
+import {
+  getPlayerMiniStats,
+  getRoomCreatedAt,
+  getHeadToHead,
+  type PlayerMiniStats,
+  type H2HSummary,
+} from "@/lib/indexer";
+import { truncateAddress, getTokenSymbol, timeAgo } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
@@ -38,6 +45,10 @@ export default function JoinRoomPage() {
   const [error, setError] = useErrorToast();
   const [showBackup, setShowBackup] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [hostStats, setHostStats] = useState<PlayerMiniStats | null>(null);
+  const [createdAt, setCreatedAt] = useState<number | null>(null);
+  const [h2h, setH2H] = useState<H2HSummary | null>(null);
 
   const { data: tokenDecimals } = useReadContract({
     address: room?.token,
@@ -99,6 +110,24 @@ export default function JoinRoomPage() {
       })
       .finally(() => setLoading(false));
   }, [fetchRoom, publicClient, params.roomId]);
+
+  // Load indexer data: host stats, room age, head-to-head (all in parallel)
+  useEffect(() => {
+    if (!room) return;
+    const isOpponent = !!address && address.toLowerCase() !== room.playerA.toLowerCase();
+
+    void Promise.allSettled([
+      getPlayerMiniStats(room.playerA).then(setHostStats),
+      getRoomCreatedAt(params.roomId).then(setCreatedAt),
+      isOpponent
+        ? getHeadToHead(address!, room.playerA).then(setH2H)
+        : Promise.resolve(),
+    ]).then((results) => {
+      results.forEach((r) => {
+        if (r.status === "rejected") logger.error("[join] indexer fetch:", r.reason);
+      });
+    });
+  }, [room?.playerA, address, params.roomId]);
 
   // Show backup modal for PlayerA if they haven't seen it and secret still exists
   useEffect(() => {
@@ -270,22 +299,80 @@ export default function JoinRoomPage() {
         <div className="w-10" />
       </header>
 
-      <section className="rounded-xl bg-white/5 p-4 text-sm">
-        <div className="flex justify-between">
+      <section className="divide-y divide-white/5 rounded-xl bg-white/5 p-4 text-sm">
+        {/* Host + inline record */}
+        <div className="flex items-start justify-between pb-2.5">
           <span className="text-white/60">Host</span>
-          <span className="font-mono text-white/80">{truncateAddress(room.playerA)}</span>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="font-mono text-white/80">{truncateAddress(room.playerA)}</span>
+            {hostStats && (() => {
+              const total = hostStats.wins + hostStats.losses + hostStats.ties;
+              const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
+              return (
+                <span className="text-xs text-white/40">
+                  <span className="text-green-400">{hostStats.wins}W</span>
+                  {" · "}
+                  <span className="text-red-400">{hostStats.losses}L</span>
+                  {hostStats.ties > 0 && <> · <span className="text-yellow-400">{hostStats.ties}T</span></>}
+                  {total > 0 && <> · {wr}%</>}
+                  {hostStats.currentStreak >= 3 && (
+                    <span className="text-orange-400"> 🔥{hostStats.currentStreak}</span>
+                  )}
+                </span>
+              );
+            })()}
+          </div>
         </div>
-        <div className="flex justify-between">
+
+        {/* Stake */}
+        <div className="flex justify-between py-2.5">
           <span className="text-white/60">Stake</span>
           <span className="font-mono text-white/80">
             {formatUnits(room.stake, tokenDecimals ?? 18)} {tokenSymbol}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-white/60">State</span>
+
+        {/* Prize preview */}
+        <div className="flex justify-between py-2.5">
+          <span className="text-white/60">Prize if you win</span>
+          <span className="font-mono font-semibold text-green-400">
+            ~{tokenDecimals != null
+              ? (Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)
+              : "…"}{" "}
+            {tokenSymbol}
+          </span>
+        </div>
+
+        {/* Status */}
+        <div className="flex justify-between py-2.5">
+          <span className="text-white/60">Status</span>
           <span className="text-white/80">{ROOM_STATE_LABEL[room.state]}</span>
         </div>
+
+        {/* Age */}
+        {createdAt && (
+          <div className="flex justify-between pt-2.5">
+            <span className="text-white/60">Created</span>
+            <span className="text-white/40">{timeAgo(createdAt)}</span>
+          </div>
+        )}
       </section>
+
+      {/* Head-to-head — solo visible si ya jugaste contra este host */}
+      {!isPlayerA && h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
+          <span className="text-white/40">Your record vs this host:</span>
+          <span className="text-green-400">{h2h.myWins}W</span>
+          <span className="text-white/20">·</span>
+          <span className="text-red-400">{h2h.theirWins}L</span>
+          {h2h.ties > 0 && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="text-yellow-400">{h2h.ties}T</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Player A waiting for opponent */}
       {room.state === ROOM_STATE.OPEN && isPlayerA && (

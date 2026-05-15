@@ -11,8 +11,15 @@ import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
+import {
+  getPlayerMiniStats,
+  getHeadToHead,
+  type PlayerMiniStats,
+  type H2HSummary,
+} from "@/lib/indexer";
 import { getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
+import { logger } from "@/lib/logger";
 
 const REVEAL_WINDOW = 900n;
 
@@ -49,6 +56,10 @@ export default function GamePage() {
   const [shared, setShared] = useState(false);
   const [error, setError] = useErrorToast();
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [hostStats, setHostStats] = useState<PlayerMiniStats | null>(null);
+  const [guestStats, setGuestStats] = useState<PlayerMiniStats | null>(null);
+  const [h2h, setH2H] = useState<H2HSummary | null>(null);
 
   const refresh = useCallback(async () => {
     if (!publicClient || !params.roomId) return;
@@ -109,6 +120,25 @@ export default function GamePage() {
     setLoading(true);
     refresh().finally(() => setLoading(false));
   }, [refresh]);
+
+  // Load player stats and H2H once both players are known
+  useEffect(() => {
+    if (!room?.playerB) return;
+
+    void Promise.allSettled([
+      getPlayerMiniStats(room.playerA).then(setHostStats),
+      getPlayerMiniStats(room.playerB).then(setGuestStats),
+      address
+        ? getHeadToHead(address, address.toLowerCase() === room.playerA.toLowerCase()
+            ? room.playerB
+            : room.playerA).then(setH2H)
+        : Promise.resolve(),
+    ]).then((results) => {
+      results.forEach((r) => {
+        if (r.status === "rejected") logger.error("[game] indexer fetch:", r.reason);
+      });
+    });
+  }, [room?.playerA, room?.playerB, address]);
 
   // Poll every 4s while Matched (state=2) so both players see result automatically
   useEffect(() => {
@@ -249,10 +279,49 @@ export default function GamePage() {
       </header>
 
       {/* Dice display — 2 dice per player */}
-      <section className="flex items-center justify-center gap-4 py-8">
-        <DicePair roll1={result?.rollA1} roll2={result?.rollA2} label="Host" delay={0} />
-        <div className="text-2xl text-white/40">vs</div>
-        <DicePair roll1={result?.rollB1} roll2={result?.rollB2} label="Guest" delay={200} />
+      <section className="flex flex-col gap-3 py-6">
+        <div className="flex items-center justify-center gap-4">
+          <DicePair roll1={result?.rollA1} roll2={result?.rollA2} label="Host" delay={0} />
+          <div className="text-2xl text-white/40">vs</div>
+          <DicePair roll1={result?.rollB1} roll2={result?.rollB2} label="Guest" delay={200} />
+        </div>
+
+        {/* Player records under the dice */}
+        {(hostStats || guestStats) && (
+          <div className="flex items-start justify-between px-2 text-xs text-white/40">
+            {hostStats ? (() => {
+              const total = hostStats.wins + hostStats.losses + hostStats.ties;
+              const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
+              return (
+                <span>
+                  <span className="text-green-400">{hostStats.wins}W</span>
+                  {" · "}
+                  <span className="text-red-400">{hostStats.losses}L</span>
+                  {total > 0 && <> · {wr}%</>}
+                  {hostStats.currentStreak >= 3 && (
+                    <span className="text-orange-400"> 🔥{hostStats.currentStreak}</span>
+                  )}
+                </span>
+              );
+            })() : <span />}
+
+            {guestStats ? (() => {
+              const total = guestStats.wins + guestStats.losses + guestStats.ties;
+              const wr = total > 0 ? Math.round((guestStats.wins / total) * 100) : 0;
+              return (
+                <span className="text-right">
+                  <span className="text-green-400">{guestStats.wins}W</span>
+                  {" · "}
+                  <span className="text-red-400">{guestStats.losses}L</span>
+                  {total > 0 && <> · {wr}%</>}
+                  {guestStats.currentStreak >= 3 && (
+                    <span className="text-orange-400">🔥{guestStats.currentStreak} </span>
+                  )}
+                </span>
+              );
+            })() : <span />}
+          </div>
+        )}
       </section>
 
       {/* Outcome */}
@@ -289,18 +358,51 @@ export default function GamePage() {
         </section>
       )}
 
+      {/* Prize — visible while waiting for reveal */}
+      {room.state === ROOM_STATE.MATCHED && tokenDecimals != null && (
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-center">
+          <span className="text-sm text-white/40">Prize:</span>
+          <span className="font-mono font-bold text-white">
+            ~{(Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)} {tokenSymbol}
+          </span>
+        </div>
+      )}
+
+      {/* Head-to-head — shown after both players are known */}
+      {h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
+        <div className="flex items-center justify-center gap-2 text-xs text-white/30">
+          <span>Your record vs opponent:</span>
+          <span className="text-green-400">{h2h.myWins}W</span>
+          <span>·</span>
+          <span className="text-red-400">{h2h.theirWins}L</span>
+          {h2h.ties > 0 && <><span>·</span><span className="text-yellow-400">{h2h.ties}T</span></>}
+        </div>
+      )}
+
       {/* Actions while Matched */}
       {room.state === ROOM_STATE.MATCHED && (
         <section className="flex flex-col gap-3">
           {isPlayerA && (
-            <button
-              type="button"
-              disabled={!isConnected || busy}
-              onClick={onReveal}
-              className="rounded-2xl bg-celo-yellow py-4 font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
-            >
-              {busy ? "Rolling…" : "Reveal and roll"}
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={!isConnected || busy}
+                onClick={onReveal}
+                className="rounded-2xl bg-celo-yellow py-4 font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+              >
+                {busy ? "Rolling…" : "Reveal and roll"}
+              </button>
+              {blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
+                <p className={`text-center text-xs ${blocksUntilExpiry < 100 ? "text-orange-400/70" : "text-white/30"}`}>
+                  Reveal within ~{blocksUntilExpiry} blocks (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min) or opponent can claim your stake
+                </p>
+              )}
+              {canClaim && (
+                <p className="text-center text-xs text-red-400/70">
+                  Time is up — opponent can now claim your stake. Reveal immediately.
+                </p>
+              )}
+            </>
           )}
 
           {isPlayerB && !canClaim && (

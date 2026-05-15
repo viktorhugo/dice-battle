@@ -281,6 +281,102 @@ export async function getLeaderboardAllTime(limit = 50): Promise<LeaderboardEntr
   });
 }
 
+const PLAYER_MINI_STATS_QUERY = gql`
+  query PlayerMiniStats($id: String!) {
+    Player_by_pk(id: $id) {
+      wins
+      losses
+      ties
+      currentStreak
+    }
+  }
+`;
+
+const ROOM_CREATED_AT_QUERY = gql`
+  query RoomCreatedAt($id: String!) {
+    Room(where: { id: { _eq: $id } }, limit: 1) {
+      createdAt
+    }
+  }
+`;
+
+const HEAD_TO_HEAD_QUERY = gql`
+  query HeadToHead($a: String!, $b: String!) {
+    Room(
+      where: {
+        _and: [
+          {
+            _or: [
+              { _and: [{ playerA: { _eq: $a } }, { playerB: { _eq: $b } }] }
+              { _and: [{ playerA: { _eq: $b } }, { playerB: { _eq: $a } }] }
+            ]
+          }
+          { state: { _in: ["RESOLVED", "TIED"] } }
+        ]
+      }
+      order_by: { resolvedAt: desc }
+      limit: 20
+    ) {
+      winner
+      state
+    }
+  }
+`;
+
+export type PlayerMiniStats = {
+  wins: number;
+  losses: number;
+  ties: number;
+  currentStreak: number;
+};
+
+export async function getPlayerMiniStats(address: string): Promise<PlayerMiniStats | null> {
+  const id = address.toLowerCase();
+  const data = await indexer.request<{
+    Player_by_pk: { wins: string; losses: string; ties: string; currentStreak: string } | null;
+  }>(PLAYER_MINI_STATS_QUERY, { id });
+  if (!data.Player_by_pk) return null;
+  const p = data.Player_by_pk;
+  return {
+    wins: Number(p.wins),
+    losses: Number(p.losses),
+    ties: Number(p.ties),
+    currentStreak: Number(p.currentStreak),
+  };
+}
+
+export async function getRoomCreatedAt(roomId: string): Promise<number | null> {
+  const data = await indexer.request<{ Room: { createdAt: string }[] }>(
+    ROOM_CREATED_AT_QUERY,
+    { id: roomId }
+  );
+  const first = data.Room[0];
+  return first ? Number(first.createdAt) : null;
+}
+
+export type H2HSummary = { myWins: number; theirWins: number; ties: number };
+
+export async function getHeadToHead(
+  myAddress: string,
+  opponentAddress: string
+): Promise<H2HSummary | null> {
+  const a = myAddress.toLowerCase();
+  const b = opponentAddress.toLowerCase();
+  const data = await indexer.request<{
+    Room: { winner: string | null; state: string }[];
+  }>(HEAD_TO_HEAD_QUERY, { a, b });
+
+  if (data.Room.length === 0) return null;
+
+  let myWins = 0, theirWins = 0, ties = 0;
+  for (const room of data.Room) {
+    if (room.state === "TIED") ties++;
+    else if (room.winner?.toLowerCase() === a) myWins++;
+    else theirWins++;
+  }
+  return { myWins, theirWins, ties };
+}
+
 export async function getLeaderboardPeriod(sinceSeconds: number): Promise<LeaderboardEntry[]> {
   const data = await indexer.request<{ Room: IndexerPeriodRoom[] }>(
     LEADERBOARD_PERIOD_QUERY,
