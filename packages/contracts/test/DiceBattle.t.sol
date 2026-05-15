@@ -339,21 +339,27 @@ contract DiceBattleTest is Test {
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         // Find either RoomResolved or RoomTied
-        bytes32 resolvedSig = keccak256("RoomResolved(uint256,address,uint8,uint8,uint256,uint256)");
-        bytes32 tiedSig = keccak256("RoomTied(uint256,uint8,uint8)");
+        bytes32 resolvedSig = keccak256("RoomResolved(uint256,address,uint8,uint8,uint8,uint8,uint256,uint256)");
+        bytes32 tiedSig = keccak256("RoomTied(uint256,uint8,uint8,uint8,uint8)");
 
         for (uint256 i; i < logs.length; i++) {
             if (logs[i].topics[0] == resolvedSig) {
-                (uint8 rollA, uint8 rollB,,) = abi.decode(logs[i].data, (uint8, uint8, uint256, uint256));
-                assertGe(rollA, 1); assertLe(rollA, 6);
-                assertGe(rollB, 1); assertLe(rollB, 6);
+                (uint8 rollA1, uint8 rollA2, uint8 rollB1, uint8 rollB2,,) =
+                    abi.decode(logs[i].data, (uint8, uint8, uint8, uint8, uint256, uint256));
+                assertGe(rollA1, 1); assertLe(rollA1, 6);
+                assertGe(rollA2, 1); assertLe(rollA2, 6);
+                assertGe(rollB1, 1); assertLe(rollB1, 6);
+                assertGe(rollB2, 1); assertLe(rollB2, 6);
                 return;
             }
             if (logs[i].topics[0] == tiedSig) {
-                (uint8 rollA, uint8 rollB) = abi.decode(logs[i].data, (uint8, uint8));
-                assertGe(rollA, 1); assertLe(rollA, 6);
-                assertGe(rollB, 1); assertLe(rollB, 6);
-                assertEq(rollA, rollB);
+                (uint8 rollA1, uint8 rollA2, uint8 rollB1, uint8 rollB2) =
+                    abi.decode(logs[i].data, (uint8, uint8, uint8, uint8));
+                assertGe(rollA1, 1); assertLe(rollA1, 6);
+                assertGe(rollA2, 1); assertLe(rollA2, 6);
+                assertGe(rollB1, 1); assertLe(rollB1, 6);
+                assertGe(rollB2, 1); assertLe(rollB2, 6);
+                assertEq(rollA1 + rollA2, rollB1 + rollB2);
                 return;
             }
         }
