@@ -3,6 +3,7 @@ export
 
 .PHONY: help install build test test-fuzz test-gas coverage fmt fmt-check \
 	snapshot storage-check size deploy-sepolia deploy-mainnet \
+	deploy-tournament-sepolia deploy-tournament-mainnet \
 	verify-sepolia verify-mainnet anvil clean
 
 help: ## Show this help
@@ -52,6 +53,23 @@ deploy-sepolia: ## Deploy to Celo Sepolia and verify
 
 deploy-mainnet: ## Deploy to Celo mainnet and verify
 	forge script script/Deploy.s.sol:Deploy \
+		--rpc-url celo \
+		--account celo-mainnet \
+		--broadcast \
+		--verify \
+		--slow \
+		-vvvv
+
+deploy-tournament-sepolia: ## Deploy DailyTournament to Celo Sepolia and verify
+	forge script script/DeployTournament.s.sol:DeployTournament \
+		--rpc-url celo_sepolia \
+		--account celo-sepolia \
+		--broadcast \
+		--verify \
+		-vvvv
+
+deploy-tournament-mainnet: ## Deploy DailyTournament to Celo mainnet and verify
+	forge script script/DeployTournament.s.sol:DeployTournament \
 		--rpc-url celo \
 		--account celo-mainnet \
 		--broadcast \
