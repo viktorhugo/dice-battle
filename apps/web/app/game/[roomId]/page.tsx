@@ -191,7 +191,6 @@ export default function GamePage() {
       return;
     }
     setBusy(true);
-    setError(null);
     try {
       const hash = await writeContractAsync({
         address: GAME_ADDRESS,

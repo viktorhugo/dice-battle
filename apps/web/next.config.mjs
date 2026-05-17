@@ -6,7 +6,10 @@ const tunnelHost = process.env.TUNNEL_HOST;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
+  experimental: {
+    webpackMemoryOptimizations: true,
+  },
   ...(tunnelHost && { allowedDevOrigins: [tunnelHost] }),
   // Turbopack (default in Next.js 16) handles Node built-in stubs natively.
   turbopack: {

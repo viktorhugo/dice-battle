@@ -19,6 +19,7 @@ packages/contracts/lib/
 # Env
 .env
 .env.local
+.env.prod
 .env*.local
 
 # Build output

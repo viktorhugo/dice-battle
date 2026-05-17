@@ -169,6 +169,26 @@ export default function JoinRoomPage() {
     };
   }, [room?.state, busy, fetchRoom]);
 
+  async function onCancel() {
+    if (!publicClient) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const hash = await writeContractAsync({
+        address: GAME_ADDRESS,
+        abi: DICE_BATTLE_ABI,
+        functionName: "cancelRoom",
+        args: [BigInt(params.roomId)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      router.push("/");
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onJoin() {
     logger.log("[onJoin] Iniciando join — wallet:", address, "| roomId:", params.roomId);
     if (!address || !publicClient || !room) return;
@@ -385,6 +405,14 @@ export default function JoinRoomPage() {
             className="mt-2 block w-full rounded-lg border border-white/10 py-2 text-xs text-white active:opacity-70"
           >
             Copy link
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="mt-2 block w-full rounded-lg border border-red-500/20 py-2 text-xs text-red-400 active:opacity-70 disabled:opacity-40"
+          >
+            {busy ? "Cancelling…" : "Cancel room — recover stake"}
           </button>
         </div>
       )}
