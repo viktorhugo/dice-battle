@@ -20,6 +20,8 @@ import { truncateAddress, getTokenSymbol, timeAgo } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
+import { CircleSlash } from "lucide-react";
+import { FloatingToast } from "@/components/ui/floating-toast";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
 import { loadSecret } from "@/lib/commitment";
 
@@ -42,6 +44,7 @@ export default function JoinRoomPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
   const [error, setError] = useErrorToast();
   const [showBackup, setShowBackup] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -172,7 +175,6 @@ export default function JoinRoomPage() {
   async function onCancel() {
     if (!publicClient) return;
     setBusy(true);
-    setError(null);
     try {
       const hash = await writeContractAsync({
         address: GAME_ADDRESS,
@@ -181,7 +183,9 @@ export default function JoinRoomPage() {
         args: [BigInt(params.roomId)],
       });
       await publicClient.waitForTransactionReceipt({ hash });
-      router.push("/");
+      setCancelSuccess(true);
+      await new Promise((r) => setTimeout(r, 3500));
+      router.push("/?cancelled=1");
     } catch (e) {
       setError(e);
     } finally {
@@ -399,21 +403,32 @@ export default function JoinRoomPage() {
         <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
           <p>You created this room. Share the link with your opponent.</p>
           <p className="mt-1 text-xs text-white/40 animate-pulse">Waiting for someone to join…</p>
-          <button
-            type="button"
-            onClick={() => navigator.clipboard?.writeText(window.location.href)}
-            className="mt-2 block w-full rounded-lg border border-white/10 py-2 text-xs text-white active:opacity-70"
-          >
-            Copy link
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-            className="mt-2 block w-full rounded-lg border border-red-500/20 py-2 text-xs text-red-400 active:opacity-70 disabled:opacity-40"
-          >
-            {busy ? "Cancelling…" : "Cancel room — recover stake"}
-          </button>
+          {
+            cancelSuccess ? (
+              <p className="mt-3 text-center text-xs text-white/40 animate-pulse">Redirecting to home…</p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(window.location.href)}
+                  className="mt-2 block w-full rounded-lg border border-white/10 py-2 text-xs text-white active:opacity-70"
+                >
+                  Copy link
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onCancel}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-red-500 py-2 text-xs text-red-400 active:opacity-70 disabled:opacity-40"
+                >
+                  {
+                    busy 
+                    ? <><Spinner /> Cancelling… </>
+                    : <> <CircleSlash /> Cancel room — recover stake</>}
+                </button>
+              </>
+            )
+          }
         </div>
       )}
 
@@ -461,6 +476,8 @@ export default function JoinRoomPage() {
           Go to game →
         </Link>
       )}
+
+      <FloatingToast show={cancelSuccess} message="Room cancelled — stake recovered" />
 
       {/* Game already finished */}
       {(room.state === ROOM_STATE.RESOLVED || room.state === ROOM_STATE.EXPIRED) && (

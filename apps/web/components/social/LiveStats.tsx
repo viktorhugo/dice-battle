@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLiveStats, type LiveStats } from "@/lib/indexer";
 import { logger } from "@/lib/logger";
+
+const FAST_POLL_MS = 2_000;
+const FAST_POLL_DURATION_MS = 10_000;
+const NORMAL_POLL_MS = 30_000;
 
 function StatItem({
   value,
@@ -41,6 +46,25 @@ function StatItem({
 
 export function LiveStats() {
   const [stats, setStats] = useState<LiveStats | null>(null);
+  const [fastPoll, setFastPoll] = useState(false);
+  const [optimisticOffset, setOptimisticOffset] = useState(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const cancelled = searchParams.get("cancelled") === "1";
+
+  // B: optimistic offset + C: fast-poll mode when coming from a cancel
+  useEffect(() => {
+    if (!cancelled) return;
+    setFastPoll(true);
+    setOptimisticOffset(-1);
+    const timer = setTimeout(() => {
+      setFastPoll(false);
+      setOptimisticOffset(0);
+      router.replace("/");
+    }, FAST_POLL_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [cancelled, router]);
 
   useEffect(() => {
     async function refresh() {
@@ -54,9 +78,9 @@ export function LiveStats() {
     }
 
     refresh();
-    const id = setInterval(refresh, 30_000);
+    const id = setInterval(refresh, fastPoll ? FAST_POLL_MS : NORMAL_POLL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [fastPoll]);
 
   if (!stats) {
     return (
@@ -74,7 +98,7 @@ export function LiveStats() {
   return (
     <div className="grid grid-cols-3 rounded-xl border border-white/10 bg-white/5">
       <StatItem
-        value={stats.openRooms}
+        value={Math.max(0, stats.openRooms + optimisticOffset)}
         label="Open rooms"
         href="/rooms"
         className="border-r border-white/10 py-3"

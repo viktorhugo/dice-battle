@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Medal } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   return (
@@ -18,7 +20,18 @@ export default function Home() {
         </p>
       </header>
 
-      <LiveStats />
+      <Suspense fallback={
+        <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <Skeleton className="h-4 w-8" />
+              <Skeleton className="h-2.5 w-16" />
+            </div>
+          ))}
+        </div>
+      }>
+        <LiveStats />
+      </Suspense>
 
       <div className="grid gap-3">
         <Link
