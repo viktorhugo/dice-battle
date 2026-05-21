@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useConnection } from "wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLiveStats, type LiveStats } from "@/lib/indexer";
 import { logger } from "@/lib/logger";
@@ -50,6 +51,7 @@ export function LiveStats() {
   const [optimisticOffset, setOptimisticOffset] = useState(0);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { address } = useConnection();
 
   const cancelled = searchParams.get("cancelled") === "1";
 
@@ -69,7 +71,7 @@ export function LiveStats() {
   useEffect(() => {
     async function refresh() {
       try {
-        const data = await getLiveStats();
+        const data = await getLiveStats(address ?? undefined);
         logger.log("[liveStats]", data);
         setStats(data);
       } catch (e) {
@@ -80,7 +82,7 @@ export function LiveStats() {
     refresh();
     const id = setInterval(refresh, fastPoll ? FAST_POLL_MS : NORMAL_POLL_MS);
     return () => clearInterval(id);
-  }, [fastPoll]);
+  }, [fastPoll, address]);
 
   if (!stats) {
     return (

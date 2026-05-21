@@ -114,6 +114,39 @@ const OPEN_ROOMS_PAGE_QUERY = gql`
   }
 `;
 
+const OPEN_ROOMS_PAGE_FILTERED_QUERY = gql`
+  query OpenRoomsPageFiltered($limit: Int!, $offset: Int!, $excludeAddress: String!) {
+    Room(
+      limit: $limit
+      offset: $offset
+      order_by: { createdAt: desc }
+      where: {
+        _and: [
+          { state: { _eq: "OPEN" } }
+          { playerA: { _neq: $excludeAddress } }
+        ]
+      }
+    ) {
+      id
+      playerA
+      token
+      stake
+      createdAt
+    }
+    allOpen: Room(
+      where: {
+        _and: [
+          { state: { _eq: "OPEN" } }
+          { playerA: { _neq: $excludeAddress } }
+        ]
+      }
+      limit: 500
+    ) {
+      id
+    }
+  }
+`;
+
 const PLAYER_PROFILE_QUERY = gql`
   query PlayerProfile($id: String!) {
     Player_by_pk(id: $id) {
@@ -155,6 +188,31 @@ const PLAYER_PROFILE_QUERY = gql`
 const LIVE_STATS_QUERY = gql`
   query LiveStats($since: numeric!) {
     openRooms: Room(where: { state: { _eq: "OPEN" } }, limit: 500) {
+      id
+    }
+    gamesToday: Room(where: { createdAt: { _gte: $since } }, limit: 500) {
+      id
+    }
+    totalGames: Room(
+      where: { state: { _in: ["RESOLVED", "TIED"] } }
+      limit: 9999
+    ) {
+      id
+    }
+  }
+`;
+
+const LIVE_STATS_FILTERED_QUERY = gql`
+  query LiveStatsFiltered($since: numeric!, $excludeAddress: String!) {
+    openRooms: Room(
+      where: {
+        _and: [
+          { state: { _eq: "OPEN" } }
+          { playerA: { _neq: $excludeAddress } }
+        ]
+      }
+      limit: 500
+    ) {
       id
     }
     gamesToday: Room(where: { createdAt: { _gte: $since } }, limit: 500) {
@@ -214,19 +272,28 @@ export async function getOpenRooms(limit = 20): Promise<IndexerRoom[]> {
 
 export async function getOpenRoomsPage(
   page: number,
-  pageSize = 10
+  pageSize = 10,
+  excludeAddress?: string
 ): Promise<{ rooms: IndexerRoom[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+
+  if (excludeAddress) {
+    const data = await indexer.request<{
+      Room: IndexerRoom[];
+      allOpen: { id: string }[];
+    }>(OPEN_ROOMS_PAGE_FILTERED_QUERY, {
+      limit: pageSize,
+      offset,
+      excludeAddress: excludeAddress.toLowerCase(),
+    });
+    return { rooms: data.Room, total: data.allOpen.length };
+  }
+
   const data = await indexer.request<{
     Room: IndexerRoom[];
     allOpen: { id: string }[];
-  }>(OPEN_ROOMS_PAGE_QUERY, {
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-  });
-  return {
-    rooms: data.Room,
-    total: data.allOpen.length,
-  };
+  }>(OPEN_ROOMS_PAGE_QUERY, { limit: pageSize, offset });
+  return { rooms: data.Room, total: data.allOpen.length };
 }
 
 export async function getPlayerProfile(address: string): Promise<{
@@ -247,13 +314,17 @@ export type LiveStats = {
   totalGames: number;
 };
 
-export async function getLiveStats(): Promise<LiveStats> {
+export async function getLiveStats(excludeAddress?: string): Promise<LiveStats> {
   const since = Math.floor(Date.now() / 1000) - 86_400;
+  const query = excludeAddress ? LIVE_STATS_FILTERED_QUERY : LIVE_STATS_QUERY;
+  const variables = excludeAddress
+    ? { since: since.toString(), excludeAddress: excludeAddress.toLowerCase() }
+    : { since: since.toString() };
   const data = await indexer.request<{
     openRooms: { id: string }[];
     gamesToday: { id: string }[];
     totalGames: { id: string }[];
-  }>(LIVE_STATS_QUERY, { since: since.toString() });
+  }>(query, variables);
   return {
     openRooms: data.openRooms.length,
     gamesToday: data.gamesToday.length,

@@ -73,6 +73,9 @@ export const GAME_DEPLOY_BLOCK: bigint =
 
 export const CHAIN_ID = NETWORK === "celo" ? 42_220 : 11_142_220;
 
+// Set to true to show block/minute countdown timers in the game UI.
+export const SHOW_BLOCK_COUNTDOWN = false;
+
 // Minimal ERC20 ABI for approve/allowance/balanceOf
 export const ERC20_ABI = [
   {

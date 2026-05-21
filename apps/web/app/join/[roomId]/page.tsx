@@ -141,6 +141,18 @@ export default function JoinRoomPage() {
     }
   }, [room, address, loading, params.roomId]);
 
+  // Auto-redirect to /game when room is already MATCHED (e.g. Player A returns after leaving the page)
+  useEffect(() => {
+    if (loading || !room || room.state !== ROOM_STATE.MATCHED) return;
+    // If Player A hasn't backed up the secret yet, let the backup modal show first;
+    // the modal's onDismiss will redirect once dismissed.
+    if (address) {
+      const isA = address.toLowerCase() === room.playerA.toLowerCase();
+      if (isA && !!loadSecret(params.roomId) && !hasSeenBackup(params.roomId)) return;
+    }
+    router.push(`/game/${params.roomId}`);
+  }, [loading, room, address, params.roomId, router]);
+
   // Poll every 4s while state=Open so Player A sees when Player B joins
   useEffect(() => {
     if (!room || room.state !== ROOM_STATE.OPEN || busy) return;
@@ -260,7 +272,13 @@ export default function JoinRoomPage() {
         <SecretBackupModal
           roomId={params.roomId}
           secret={secret}
-          onDismiss={() => setShowBackup(false)}
+          onDismiss={() => {
+            if (room?.state === ROOM_STATE.MATCHED) {
+              router.push(`/game/${params.roomId}`);
+            } else {
+              setShowBackup(false);
+            }
+          }}
         />
       );
     }
@@ -318,7 +336,7 @@ export default function JoinRoomPage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">← Back</Link>
+        <Link href="/rooms" className="text-sm text-white/60">← Back</Link>
         <h1 className="text-lg font-semibold">Room #{params.roomId}</h1>
         <div className="w-10" />
       </header>

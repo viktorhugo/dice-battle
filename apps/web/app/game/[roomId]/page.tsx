@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret } from "@/lib/commitment";
-import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
+import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, SHOW_BLOCK_COUNTDOWN } from "@/lib/constants";
 import {
   getPlayerMiniStats,
   getHeadToHead,
@@ -329,7 +329,9 @@ export default function GamePage() {
           {result.kind === "tie" && (
             <>
               <p className="text-lg font-bold text-yellow-400">It's a tie!</p>
-              <p className="mt-1 text-xs text-white/60">Both players refunded their stake.</p>
+              <p className="mt-1 font-mono text-sm text-white/80">
+                +{formatUnits(room.stake, tokenDecimals ?? 18)} {tokenSymbol} refunded
+              </p>
             </>
           )}
           {result.kind === "win" && youWon && (
@@ -391,12 +393,12 @@ export default function GamePage() {
               >
                 {busy ? "Rolling…" : "Reveal and roll"}
               </button>
-              {blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
+              {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
                 <p className={`text-center text-xs ${blocksUntilExpiry < 100 ? "text-orange-400/70" : "text-white/30"}`}>
                   Reveal within ~{blocksUntilExpiry} blocks (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min) or opponent can claim your stake
                 </p>
               )}
-              {canClaim && (
+              {SHOW_BLOCK_COUNTDOWN && canClaim && (
                 <p className="text-center text-xs text-red-400/70">
                   Time is up — opponent can now claim your stake. Reveal immediately.
                 </p>
@@ -407,7 +409,7 @@ export default function GamePage() {
           {isPlayerB && !canClaim && (
             <div className="flex flex-col items-center gap-1 py-3 text-center">
               <p className="text-sm text-white/50 animate-pulse">Waiting for host to reveal…</p>
-              {blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
+              {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
                 <p className="text-xs text-white/30">
                   Claim window opens in ~{blocksUntilExpiry} blocks (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min)
                 </p>
