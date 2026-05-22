@@ -174,7 +174,8 @@ export default function GamePage() {
 
   const tokenSymbol = room ? getTokenSymbol(room.token) : "";
 
-  const isPlayerA = address && room && address.toLowerCase() === room.playerA.toLowerCase();
+  const hasSecret = !!loadSecret(params.roomId);
+  const isPlayerA = (address && room && address.toLowerCase() === room.playerA.toLowerCase()) || (hasSecret && room?.state === ROOM_STATE.MATCHED);
   const isPlayerB = address && room && address.toLowerCase() === room.playerB.toLowerCase();
 
   // How many blocks until the claim window opens (negative = already expired)
@@ -406,7 +407,7 @@ export default function GamePage() {
             </>
           )}
 
-          {isPlayerB && !canClaim && (
+          {isPlayerB && (!canClaim || !SHOW_BLOCK_COUNTDOWN) && (
             <div className="flex flex-col items-center gap-1 py-3 text-center">
               <p className="text-sm text-white/50 animate-pulse">Waiting for host to reveal…</p>
               {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
@@ -417,7 +418,7 @@ export default function GamePage() {
             </div>
           )}
 
-          {isPlayerB && canClaim && (
+          {SHOW_BLOCK_COUNTDOWN && isPlayerB && canClaim && (
             <button
               type="button"
               disabled={busy}

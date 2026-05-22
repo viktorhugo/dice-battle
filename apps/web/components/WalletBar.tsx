@@ -1,13 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { AppKitButton } from "@reown/appkit/react";
+import { useAppKit } from "@reown/appkit/react";
 import { useChainId, useSwitchChain } from "wagmi";
 import { useMiniPay } from "@/hooks/useMiniPay";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHAIN_ID, NETWORK } from "@/lib/constants";
-import { NETWORK_LABEL } from "@/lib/utils";
+import { NETWORK_LABEL, truncateAddress } from "@/lib/utils";
+
+function ConnectButton({ address, isConnected }: { address?: string; isConnected: boolean }) {
+  const { open } = useAppKit();
+  return (
+    <button
+      type="button"
+      onClick={() => open()}
+      className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 active:opacity-70"
+    >
+      {isConnected && address ? truncateAddress(address) : "Connect"}
+    </button>
+  );
+}
 
 export function WalletBar() {
   const { isMiniPay, checked, address, isConnected } = useMiniPay();
@@ -29,7 +42,9 @@ export function WalletBar() {
             </span>
           )}
 
-          {checked && !isMiniPay && <AppKitButton />}
+          {checked && !isMiniPay && (
+            <ConnectButton address={address} isConnected={isConnected} />
+          )}
 
           {checked && isConnected && address && (
             <Link

@@ -20,6 +20,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@keyframes ghostPip {
+  0%, 100% { opacity: 0.05; }
+  50%       { opacity: 0.22; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ghostPip {
+    from, to { opacity: 0.1; }
+  }
+}
+
 @layer base {
   .theme {
     --font-heading: var(--font-sans);
