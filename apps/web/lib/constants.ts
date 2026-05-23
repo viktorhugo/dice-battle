@@ -6,13 +6,13 @@ export const NETWORK = (process.env.NEXT_PUBLIC_NETWORK || "celo") as "celo" | "
 // Dev  → NEXT_PUBLIC_NETWORK=celo_sepolia  (Celo Sepolia testnet)
 // Prod → NEXT_PUBLIC_NETWORK=celo          (Celo mainnet)
 const TOKENS_MAINNET = {
-  cUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a" as Address,
+  USDm: "0x765DE816845861e75A25fCA122bb6898B8B1282a" as Address, // formerly cUSD
   USDT: "0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e" as Address,
   USDC: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C" as Address,
 } as const;
 
 const TOKENS_SEPOLIA = {
-  cUSD: "0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b" as Address,
+  USDm: "0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b" as Address, // formerly cUSD
   USDT: "0xd077A400968890Eacc75cdc901F0356c943e4fDb" as Address,
   USDC: "0x01C5C0122039549AD1493B8220cABEdD739BC44E" as Address,
   CELO: "0x4200000000000000000000000000000000000011" as Address,
@@ -28,11 +28,11 @@ export function getTokenAddress(key: TokenKey): Address {
 
 const TOKEN_DECIMALS_MAP: Record<string, number> = {
   // Mainnet
-  "0x765de816845861e75a25fca122bb6898b8b1282a": 18, // cUSD
+  "0x765de816845861e75a25fca122bb6898b8b1282a": 18, // USDm (formerly cUSD)
   "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e": 6,  // USDT
   "0xceba9300f2b948710d2653dd7b07f33a8b32118c": 6,  // USDC
   // Sepolia
-  "0xde9e4c3ce781b4ba68120d6261cbad65ce0ab00b": 18, // cUSD
+  "0xde9e4c3ce781b4ba68120d6261cbad65ce0ab00b": 18, // USDm (formerly cUSD)
   "0xd077a400968890eacc75cdc901f0356c943e4fdb": 6,  // USDT
   "0x01c5c0122039549ad1493b8220cabedd739bc44e": 6,  // USDC
   "0x4200000000000000000000000000000000000011": 18, // CELO

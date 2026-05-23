@@ -19,6 +19,10 @@ import {
 } from "@/lib/indexer";
 import { getTokenSymbol } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
+import { useFireworks } from "@/hooks/useFireworks";
+import { useAshes } from "@/hooks/useAshes";
+import { useTieClash } from "@/hooks/useTieClash";
+import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { logger } from "@/lib/logger";
 
 const REVEAL_WINDOW = 200n;
@@ -55,6 +59,25 @@ export default function GamePage() {
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
   const [error, setError] = useErrorToast();
+  const fireFireworks = useFireworks();
+  const fallAshes = useAshes();
+  const clashTie = useTieClash();
+
+  const celebrationFiredRef = useRef(false);
+  useEffect(() => {
+    if (celebrationFiredRef.current || !result) return;
+
+    const won = result.kind === "win" && result.winner?.toLowerCase() === address?.toLowerCase();
+    const lost = result.kind === "win" && result.winner?.toLowerCase() !== address?.toLowerCase();
+    const tied = result.kind === "tie";
+
+    if (won || lost || tied) {
+      celebrationFiredRef.current = true;
+      const effect = won ? fireFireworks : tied ? clashTie : fallAshes;
+      const t = setTimeout(effect, 1400);
+      return () => clearTimeout(t);
+    }
+  }, [result, address, fireFireworks, fallAshes, clashTie]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [hostStats, setHostStats] = useState<PlayerMiniStats | null>(null);
@@ -409,7 +432,7 @@ export default function GamePage() {
 
           {isPlayerB && (!canClaim || !SHOW_BLOCK_COUNTDOWN) && (
             <div className="flex flex-col items-center gap-1 py-3 text-center">
-              <p className="text-sm text-white/50 animate-pulse">Waiting for host to reveal…</p>
+              <SoftBlurText text="Waiting for host to reveal…" className="text-sm text-white/50" loop />
               {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
                 <p className="text-xs text-white/30">
                   Claim window opens in ~{blocksUntilExpiry} blocks (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min)

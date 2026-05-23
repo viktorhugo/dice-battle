@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { formatUnits } from "viem";
 import { useConnection, usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
@@ -17,8 +18,9 @@ import {
 } from "@/components/ui/pagination";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { getTokenDecimals, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
-import { truncateAddress, getTokenSymbol } from "@/lib/utils";
-import { getOpenRoomsPage, type IndexerRoom } from "@/lib/indexer";
+import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
+import Image from "next/image";
+import { getOpenRoomsPage, getRoomsCreatedAt, type IndexerRoom } from "@/lib/indexer";
 import { clearSecret } from "@/lib/commitment";
 import { logger } from "@/lib/logger";
 
@@ -28,6 +30,9 @@ const SECRET_PREFIX = "dice-battle:secret:";
 type ActiveRoom = {
   id: string;
   state: typeof ROOM_STATE.OPEN | typeof ROOM_STATE.MATCHED;
+  token?: string;
+  stake?: bigint;
+  createdAt?: number;
 };
 
 type Tab = "browse" | "mine";
@@ -63,8 +68,11 @@ function buildPageRange(current: number, total: number): (number | "ellipsis")[]
 export default function RoomsPage() {
   const publicClient = usePublicClient();
   const { address } = useConnection();
+  const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<Tab>("browse");
+  const [tab, setTab] = useState<Tab>(
+    searchParams.get("tab") === "mine" ? "mine" : "browse"
+  );
 
   const [rooms, setRooms] = useState<IndexerRoom[]>([]);
   const [total, setTotal] = useState(0);
@@ -112,11 +120,11 @@ export default function RoomsPage() {
             abi: DICE_BATTLE_ABI,
             functionName: "rooms",
             args: [BigInt(id)],
-          })) as readonly [unknown, unknown, unknown, unknown, unknown, unknown, number];
+          })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number];
 
           const state = result[6];
           if (state === ROOM_STATE.OPEN || state === ROOM_STATE.MATCHED) {
-            return { id, state } as ActiveRoom;
+            return { id, state, token: result[2], stake: result[3] } as ActiveRoom;
           }
           clearSecret(id);
           return null;
@@ -124,8 +132,16 @@ export default function RoomsPage() {
           return { id, state: ROOM_STATE.OPEN } as ActiveRoom;
         }
       })
-    ).then((results) => {
-      setMyRooms(results.filter((r): r is ActiveRoom => r !== null));
+    ).then(async (results) => {
+      const active = results.filter((r): r is ActiveRoom => r !== null);
+      try {
+        const timestamps = await getRoomsCreatedAt(active.map((r) => r.id));
+        const withDates = active.map((r) => ({ ...r, createdAt: timestamps[r.id] }));
+        withDates.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+        setMyRooms(withDates);
+      } catch {
+        setMyRooms(active);
+      }
       setMyRoomsLoading(false);
     });
   }, [publicClient]);
@@ -229,31 +245,71 @@ export default function RoomsPage() {
           {!loading && rooms.length > 0 && (
             <>
               <ul className="flex flex-col gap-3">
-                {rooms.map((room) => (
-                  <li key={room.id}>
-                    <Link
-                      href={`/join/${room.id}`}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 active:opacity-70"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-white/40">Room #{room.id}</span>
-                        <span className="font-mono text-xs text-white/60">
-                          {truncateAddress(room.playerA)}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-semibold text-white">
-                          {formatUnits(
-                            BigInt(room.stake),
-                            getTokenDecimals(room.token as `0x${string}`)
-                          )}{" "}
-                          {getTokenSymbol(room.token)}
-                        </span>
-                        <span className="text-xs text-white/40">each player</span>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                {rooms.map((room) => {
+                  const amount = formatUnits(BigInt(room.stake), getTokenDecimals(room.token as `0x${string}`));
+                  const symbol = getTokenSymbol(room.token);
+                  const badgeCls =
+                    symbol === "USDC"
+                      ? "bg-blue-500/15 border border-blue-400/30 text-blue-200"
+                      : symbol === "USDT"
+                      ? "bg-teal-500/15 border border-teal-400/30 text-teal-200"
+                      : "bg-[#5118C1]/15 border border-[#5118C1]/30 text-purple-200";
+                  const cardBorder =
+                    symbol === "USDC"
+                      ? "border-blue-500/20 border-2 hover:border-blue-400/35"
+                      : symbol === "USDT"
+                      ? "border-teal-500/20 border-2 hover:border-teal-400/35"
+                      : "border-[#5118C1]/20 border-2 hover:border-[#5118C1]/35";
+                  return (
+                    <li key={room.id}>
+                      <Link
+                        href={`/join/${room.id}`}
+                        className={`relative flex items-center justify-between overflow-hidden rounded-2xl border bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70 ${cardBorder}`}
+                      >
+                        {/* Watermark izquierdo */}
+                        <Image
+                          src={getTokenIcon(room.token)}
+                          alt=""
+                          width={90}
+                          height={90}
+                          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
+                          aria-hidden
+                        />
+
+                        {/* Nivel 2 + 3 + 4 */}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold tracking-wide text-white">
+                            Room #{room.id}
+                          </span>
+                          <span className="text-xs">
+                            <span className="text-zinc-600">by </span>
+                            <span className="font-mono text-zinc-400">{truncateAddress(room.playerA)}</span>
+                          </span>
+                          <div className={`flex items-center mt-1 gap-1.5 rounded-md px-2.5 py-1 font-bold backdrop-blur-sm ${badgeCls}`}>
+                            <Image
+                              src={getTokenIcon(room.token)}
+                              alt={symbol}
+                              width={18}
+                              height={18}
+                              className="rounded-full"
+                            />
+                            <span className="text-sm">{amount} {symbol}</span>
+                          </div>
+                        </div>
+
+                        {/* Fecha de creación */}
+                        <div className="flex flex-col items-end gap-1 z-10">
+                          <span className="text-xs font-medium text-zinc-300 z-10 rounded-full bg-zinc-900/30 px-3 py-1 backdrop-blur-sm">
+                            {formatDate(Number(room.createdAt))}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 z-10 rounded-full bg-zinc-900/30 px-3 py-0.5 backdrop-blur-sm">
+                            ({timeAgo(Number(room.createdAt))})
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
 
               {totalPages > 1 && (
@@ -315,26 +371,65 @@ export default function RoomsPage() {
           {!myRoomsLoading && myRooms.length > 0 && (
             <>
               <ul className="flex flex-col gap-3">
-                {myPagedRooms.map((room) => (
-                  <li key={room.id}>
-                    <Link
-                      href={room.state === ROOM_STATE.MATCHED ? `/game/${room.id}` : `/join/${room.id}`}
-                      className="flex items-center justify-between rounded-2xl border border-celo-yellow/20 bg-celo-yellow/5 px-4 py-4 active:opacity-70"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-white/40">Room #{room.id}</span>
-                        <span className={`text-xs font-medium ${
-                          room.state === ROOM_STATE.MATCHED ? "text-celo-yellow" : "text-white/50"
-                        }`}>
-                          {room.state === ROOM_STATE.MATCHED ? "⚡ Ready to reveal" : "⏳ Waiting for opponent"}
+                {myPagedRooms.map((room) => {
+                  const isMatched = room.state === ROOM_STATE.MATCHED;
+                  const cardBorder = isMatched
+                    ? "border-amber-500/35 border-2 hover:border-amber-400/55"
+                    : "border-zinc-700/40 border-2 hover:border-zinc-500/60";
+                  const symbol = room.token ? getTokenSymbol(room.token) : null;
+                  return (
+                    <li key={room.id}>
+                      <Link
+                        href={isMatched ? `/game/${room.id}` : `/join/${room.id}`}
+                        className={`relative flex items-center justify-between overflow-hidden rounded-2xl border bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70 ${cardBorder}`}
+                      >
+                        {/* Watermark derecho — mitad visible */}
+                        {room.token && (
+                          <Image
+                            src={getTokenIcon(room.token)}
+                            alt=""
+                            width={90}
+                            height={90}
+                            className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
+                            aria-hidden
+                          />
+                        )}
+
+                        {/* Izquierda: jerarquía de texto */}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-semibold tracking-wide text-white">
+                            Room #{room.id}
+                          </span>
+                          <span className={`text-xs font-medium ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
+                            {isMatched ? "⚡ Ready to reveal" : "⏳ Waiting for opponent"}
+                          </span>
+                          {room.token && room.stake != null && symbol && (
+                            <span className="text-xs mt-1 text-zinc-500 flex items-center gap-1.5 rounded-full py-1 font-bold backdrop-blur-sm">
+                              <Image
+                                src={getTokenIcon(room.token)}
+                                alt={symbol}
+                                width={18}
+                                height={18}
+                                className="rounded-full"
+                              />
+                              {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
+                            </span>
+                          )}
+                          {room.createdAt && (
+                            <span className="text-[11px] text-zinc-600 mt-0.5">
+                              {formatDate(room.createdAt)} ({timeAgo(room.createdAt)})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Derecha: CTA */}
+                        <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
+                          {isMatched ? "Roll dice →" : "View →"}
                         </span>
-                      </div>
-                      <span className="text-sm font-semibold text-celo-yellow">
-                        {room.state === ROOM_STATE.MATCHED ? "Roll dice →" : "View room →"}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
 
               {myTotalPages > 1 && (

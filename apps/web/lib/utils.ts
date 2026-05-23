@@ -19,10 +19,38 @@ export function getTokenSymbol(tokenAddress: string): string {
   return TOKEN_SYMBOL_MAP[tokenAddress.toLowerCase()] ?? "???";
 }
 
+export function getTokenIcon(tokenAddress: string): string {
+  const symbol = getTokenSymbol(tokenAddress);
+  if (symbol === "USDC") return "/tokens/usdc.svg";
+  if (symbol === "USDT") return "/tokens/usdt.svg";
+  if (symbol === "USDm") return "/tokens/usdm.svg";
+  return "/tokens/usdm.svg";
+}
+
+export function getTokenColor(tokenAddress: string): string {
+  const symbol = getTokenSymbol(tokenAddress);
+  if (symbol === "USDC") return "#2775CA";
+  if (symbol === "USDT") return "#279797";
+  if (symbol === "USDm") return "#5118C1";
+  return "#FCFF52";
+}
+
 export const NETWORK_LABEL: Record<string, string> = {
   celo: "Celo Mainnet",
   celo_sepolia: "Celo Sepolia",
 };
+
+export function formatDate(unixSeconds: number): string {
+  const d = new Date(unixSeconds * 1000);
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
 export function timeAgo(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds;

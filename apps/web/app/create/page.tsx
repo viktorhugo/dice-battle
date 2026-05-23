@@ -35,7 +35,7 @@ export default function CreateRoomPage() {
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
 
-  const [token, setToken] = useState<TokenKey>("cUSD");
+  const [token, setToken] = useState<TokenKey>("USDm");
   const [stake, setStake] = useState("1");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "approving" | "creating" | "done">("idle");

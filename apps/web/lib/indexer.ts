@@ -224,6 +224,17 @@ const LIVE_STATS_FILTERED_QUERY = gql`
     ) {
       id
     }
+    matchedForMe: Room(
+      where: {
+        _and: [
+          { state: { _eq: "MATCHED" } }
+          { playerA: { _eq: $excludeAddress } }
+        ]
+      }
+      limit: 50
+    ) {
+      id
+    }
   }
 `;
 
@@ -312,6 +323,7 @@ export type LiveStats = {
   openRooms: number;
   gamesToday: number;
   totalGames: number;
+  matchedForMe?: number;
 };
 
 export async function getLiveStats(excludeAddress?: string): Promise<LiveStats> {
@@ -324,11 +336,13 @@ export async function getLiveStats(excludeAddress?: string): Promise<LiveStats> 
     openRooms: { id: string }[];
     gamesToday: { id: string }[];
     totalGames: { id: string }[];
+    matchedForMe?: { id: string }[];
   }>(query, variables);
   return {
     openRooms: data.openRooms.length,
     gamesToday: data.gamesToday.length,
     totalGames: data.totalGames.length,
+    ...(data.matchedForMe != null && { matchedForMe: data.matchedForMe.length }),
   };
 }
 
@@ -422,6 +436,24 @@ export async function getRoomCreatedAt(roomId: string): Promise<number | null> {
   );
   const first = data.Room[0];
   return first ? Number(first.createdAt) : null;
+}
+
+const ROOMS_CREATED_AT_BATCH_QUERY = gql`
+  query RoomsCreatedAtBatch($ids: [String!]!) {
+    Room(where: { id: { _in: $ids } }) {
+      id
+      createdAt
+    }
+  }
+`;
+
+export async function getRoomsCreatedAt(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return {};
+  const data = await indexer.request<{ Room: { id: string; createdAt: string }[] }>(
+    ROOMS_CREATED_AT_BATCH_QUERY,
+    { ids }
+  );
+  return Object.fromEntries(data.Room.map((r) => [r.id, Number(r.createdAt)]));
 }
 
 export type H2HSummary = { myWins: number; theirWins: number; ties: number };

@@ -16,16 +16,18 @@ function StatItem({
   value,
   label,
   href,
+  highlight = false,
   className = "",
 }: {
   value: string | number;
   label: string;
   href?: string;
+  highlight?: boolean;
   className?: string;
 }) {
   const content = (
     <>
-      <span className="text-sm font-bold tabular-nums text-white">{value}</span>
+      <span className={`text-sm font-bold tabular-nums ${highlight ? "text-celo-yellow" : "text-white"}`}>{value}</span>
       <span className="text-[10px] text-white/40">{label}</span>
     </>
   );
@@ -84,10 +86,13 @@ export function LiveStats() {
     return () => clearInterval(id);
   }, [fastPoll, address]);
 
+  const showMatchedStat = !!address;
+  const cols = showMatchedStat ? "grid-cols-4" : "grid-cols-3";
+
   if (!stats) {
     return (
-      <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-        {[0, 1, 2].map((i) => (
+      <div className={`grid ${cols} gap-2 rounded-xl border border-white/10 bg-white/5 p-3`}>
+        {Array.from({ length: showMatchedStat ? 4 : 3 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-1.5">
             <Skeleton className="h-4 w-8" />
             <Skeleton className="h-2.5 w-16" />
@@ -98,13 +103,22 @@ export function LiveStats() {
   }
 
   return (
-    <div className="grid grid-cols-3 rounded-xl border border-white/10 bg-white/5">
+    <div className={`grid ${cols} rounded-xl border border-white/10 bg-white/5`}>
       <StatItem
         value={Math.max(0, stats.openRooms + optimisticOffset)}
         label="Open rooms"
         href="/rooms"
         className="border-r border-white/10 py-3"
       />
+      {showMatchedStat && (
+        <StatItem
+          value={stats.matchedForMe ?? 0}
+          label="To reveal"
+          href="/rooms?tab=mine"
+          highlight={(stats.matchedForMe ?? 0) > 0}
+          className="border-r border-white/10 py-3"
+        />
+      )}
       <StatItem
         value={stats.gamesToday}
         label="Games today"

@@ -30,7 +30,9 @@ export default function Home() {
           ))}
         </div>
       }>
-        <LiveStats />
+
+      <LiveStats />
+
       </Suspense>
 
       <div className="grid gap-3">
@@ -61,7 +63,7 @@ export default function Home() {
         <ol className="space-y-2 text-sm text-white/70">
           <li>
             <span className="font-semibold text-white">1.</span> Create a room with your stake
-            (cUSD or USDT).
+            (USDm or USDT).
           </li>
           <li>
             <span className="font-semibold text-white">2.</span> Share the link with a friend.

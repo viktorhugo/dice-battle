@@ -7,6 +7,7 @@ import { formatUnits } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, ROOM_STATE_LABEL } from "@/lib/constants";
 import {
@@ -16,7 +17,7 @@ import {
   type PlayerMiniStats,
   type H2HSummary,
 } from "@/lib/indexer";
-import { truncateAddress, getTokenSymbol, timeAgo } from "@/lib/utils";
+import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
@@ -255,7 +256,15 @@ export default function JoinRoomPage() {
         throw new Error(`Transaction reverted (hash: ${joinHash})`);
       }
 
-      logger.log("[onJoin] Join exitoso — redirigiendo a /game/" + params.roomId);
+      logger.log("[onJoin] Join exitoso — verificando estado en RPC antes de redirigir...");
+      let fresh = await fetchRoom();
+      let attempts = 0;
+      while (fresh?.state !== ROOM_STATE.MATCHED && attempts < 6) {
+        await new Promise((r) => setTimeout(r, 1000));
+        fresh = await fetchRoom();
+        attempts++;
+      }
+      logger.log("[onJoin] Estado confirmado:", fresh?.state, "— redirigiendo a /game/" + params.roomId);
       router.push(`/game/${params.roomId}`);
     } catch (e) {
       logger.error("[onJoin] Error:", e instanceof Error ? e.message : String(e));
@@ -288,28 +297,31 @@ export default function JoinRoomPage() {
     return (
       <div className="flex flex-col gap-6">
         <WalletBar />
-        {/* Header */}
         <div className="flex items-center justify-between pt-2">
           <Skeleton className="h-4 w-10" />
-          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-5 w-28" />
           <div className="w-10" />
         </div>
-        {/* Room info card */}
-        <div className="rounded-xl bg-white/5 p-4 flex flex-col gap-3">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-7 w-32 rounded-full" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="border-t border-zinc-800" />
           <div className="flex justify-between">
-            <Skeleton className="h-3 w-8" />
-            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-4 w-20" />
           </div>
           <div className="flex justify-between">
-            <Skeleton className="h-3 w-8" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-          <div className="flex justify-between">
-            <Skeleton className="h-3 w-8" />
+            <Skeleton className="h-3 w-16" />
             <Skeleton className="h-3 w-14" />
           </div>
         </div>
-        {/* Action button */}
         <Skeleton className="h-14 w-full rounded-2xl" />
       </div>
     );
@@ -330,28 +342,49 @@ export default function JoinRoomPage() {
   const isPlayerA = address?.toLowerCase() === room.playerA.toLowerCase();
   const isPlayerB = address?.toLowerCase() === room.playerB.toLowerCase();
   const tokenSymbol = getTokenSymbol(room.token);
+  const tokenIcon = getTokenIcon(room.token);
+
+  const cardBorder = tokenSymbol === "USDC"
+    ? "border-blue-500/25"
+    : tokenSymbol === "USDT"
+    ? "border-teal-500/25"
+    : "border-[#5118C1]/25";
+
+  const badgeCls = tokenSymbol === "USDC"
+    ? "bg-blue-500/15 border border-blue-400/30 text-blue-200"
+    : tokenSymbol === "USDT"
+    ? "bg-teal-500/15 border border-teal-400/30 text-teal-200"
+    : "bg-[#5118C1]/15 border border-[#5118C1]/30 text-purple-200";
+
+  const stateLabel = ROOM_STATE_LABEL[room.state];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/rooms" className="text-sm text-white/60">← Back</Link>
+        <Link href="/rooms" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">← Back</Link>
         <h1 className="text-lg font-semibold">Room #{params.roomId}</h1>
         <div className="w-10" />
       </header>
 
-      <section className="divide-y divide-white/5 rounded-xl bg-white/5 p-4 text-sm">
-        {/* Host + inline record */}
-        <div className="flex items-start justify-between pb-2.5">
-          <span className="text-white/60">Host</span>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="font-mono text-white/80">{truncateAddress(room.playerA)}</span>
+      {/* Main info card */}
+      <section className={`relative overflow-hidden rounded-2xl border bg-zinc-900/80 backdrop-blur-md p-5 ${cardBorder}`}>
+        {/* Token watermark */}
+
+        <div className="relative flex flex-col gap-4">
+          
+          {/* Host */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wider text-zinc-600">Host</span>
+            <p className="text-sm">
+              <span className="font-mono text-zinc-300">{truncateAddress(room.playerA)}</span>
+            </p>
             {hostStats && (() => {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;
               const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
               return (
-                <span className="text-xs text-white/40">
+                <p className="text-xs text-zinc-500">
                   <span className="text-green-400">{hostStats.wins}W</span>
                   {" · "}
                   <span className="text-red-400">{hostStats.losses}L</span>
@@ -360,93 +393,96 @@ export default function JoinRoomPage() {
                   {hostStats.currentStreak >= 3 && (
                     <span className="text-orange-400"> 🔥{hostStats.currentStreak}</span>
                   )}
-                </span>
+                </p>
               );
             })()}
           </div>
-        </div>
 
-        {/* Stake */}
-        <div className="flex justify-between py-2.5">
-          <span className="text-white/60">Stake</span>
-          <span className="font-mono text-white/80">
-            {formatUnits(room.stake, tokenDecimals ?? 18)} {tokenSymbol}
-          </span>
-        </div>
-
-        {/* Prize preview */}
-        <div className="flex justify-between py-2.5">
-          <span className="text-white/60">Prize if you win</span>
-          <span className="font-mono font-semibold text-green-400">
-            ~{tokenDecimals != null
-              ? (Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)
-              : "…"}{" "}
-            {tokenSymbol}
-          </span>
-        </div>
-
-        {/* Status */}
-        <div className="flex justify-between py-2.5">
-          <span className="text-white/60">Status</span>
-          <span className="text-white/80">{ROOM_STATE_LABEL[room.state]}</span>
-        </div>
-
-        {/* Age */}
-        {createdAt && (
-          <div className="flex justify-between pt-2.5">
-            <span className="text-white/60">Created</span>
-            <span className="text-white/40">{timeAgo(createdAt)}</span>
+          {/* Top row: stake badge + state */}
+          <div className="flex items-center justify-between">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold ${badgeCls}`}>
+              <img src={tokenIcon} alt="" className="h-4 w-4" />
+              {tokenDecimals != null
+                ? formatUnits(room.stake, tokenDecimals)
+                : "…"}{" "}{tokenSymbol}
+            </span>
+            <span className="text-xs text-zinc-500">{stateLabel}</span>
           </div>
-        )}
+
+          <div className="border-t border-zinc-800" />
+
+          {/* Prize */}
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs text-zinc-500">Prize if you win</span>
+            <span className="font-mono text-sm font-semibold text-green-400">
+              ~{tokenDecimals != null
+                ? (Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)
+                : "…"}{" "}
+              {tokenSymbol}
+            </span>
+          </div>
+
+          {/* Created */}
+          {createdAt && (
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs text-zinc-600">Created</span>
+              <span className="text-xs text-zinc-500">{timeAgo(createdAt)}</span>
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Head-to-head — solo visible si ya jugaste contra este host */}
+      {/* Head-to-head */}
       {!isPlayerA && h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
-          <span className="text-white/40">Your record vs this host:</span>
-          <span className="text-green-400">{h2h.myWins}W</span>
-          <span className="text-white/20">·</span>
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2.5 text-xs">
+          <span className="text-zinc-500">vs this host</span>
+          <span className="ml-auto text-green-400">{h2h.myWins}W</span>
+          <span className="text-zinc-700">·</span>
           <span className="text-red-400">{h2h.theirWins}L</span>
           {h2h.ties > 0 && (
             <>
-              <span className="text-white/20">·</span>
+              <span className="text-zinc-700">·</span>
               <span className="text-yellow-400">{h2h.ties}T</span>
             </>
           )}
         </div>
       )}
 
-      {/* Player A waiting for opponent */}
+      {/* Player A — waiting for opponent */}
       {room.state === ROOM_STATE.OPEN && isPlayerA && (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-          <p>You created this room. Share the link with your opponent.</p>
-          <p className="mt-1 text-xs text-white/40 animate-pulse">Waiting for someone to join…</p>
-          {
-            cancelSuccess ? (
-              <p className="mt-3 text-center text-xs text-white/40 animate-pulse">Redirecting to home…</p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard?.writeText(window.location.href)}
-                  className="mt-2 block w-full rounded-lg border border-white/10 py-2 text-xs text-white active:opacity-70"
-                >
-                  Copy link
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={onCancel}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-red-500 py-2 text-xs text-red-400 active:opacity-70 disabled:opacity-40"
-                >
-                  {
-                    busy 
-                    ? <><Spinner /> Cancelling… </>
-                    : <> <CircleSlash /> Cancel room — recover stake</>}
-                </button>
-              </>
-            )
-          }
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col gap-3">
+          <p className="text-sm text-zinc-400">You created this room. Share the link to challenge your opponent.</p>
+          <SoftBlurText
+            text="Waiting for someone to join…"
+            className="text-sm text-center text-zinc-600 block"
+            loop
+          />
+          {cancelSuccess ? (
+            <SoftBlurText
+              text="Redirecting to home…"
+              className="text-xs text-center text-zinc-500 block"
+            />
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(window.location.href)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 active:opacity-70 transition-opacity"
+              >
+                Copy invite link
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onCancel}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/5 py-2.5 text-xs font-medium text-red-400 active:opacity-70 disabled:opacity-40 transition-opacity"
+              >
+                {busy
+                  ? <><Spinner /> Cancelling…</>
+                  : <><CircleSlash className="h-3.5 w-3.5" /> Cancel room — recover stake</>}
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -456,31 +492,26 @@ export default function JoinRoomPage() {
         </div>
       )}
 
-      {/* Player B can join */}
+      {/* Player B — can join */}
       {room.state === ROOM_STATE.OPEN && !isPlayerA && (
         <>
           <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
             allowanceReady
               ? "border-green-500/20 bg-green-500/5 text-green-400"
-              : "border-white/10 bg-white/5 text-white/50"
+              : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
           }`}>
-            <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-white/30"}`} />
+            <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
             {allowanceReady ? "Ready — 1 transaction to confirm" : "Needs approval + join — 2 transactions"}
           </div>
           <button
-          type="button"
-          disabled={!isConnected || busy}
-          onClick={onJoin}
-          className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
-        >
-          {
-            busy 
-              ? (
-                  <>
-                    <Spinner /> Joining…
-                  </>
-                )
-              : `Match ${formatUnits(room.stake, tokenDecimals ?? 18)} ${tokenSymbol}`}
+            type="button"
+            disabled={!isConnected || busy}
+            onClick={onJoin}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+          >
+            {busy
+              ? <><Spinner /> Joining…</>
+              : `Match ${tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…"} ${tokenSymbol}`}
           </button>
         </>
       )}
@@ -497,17 +528,19 @@ export default function JoinRoomPage() {
 
       <FloatingToast show={cancelSuccess} message="Room cancelled — stake recovered" />
 
-      {/* Game already finished */}
+      {/* Resolved / expired */}
       {(room.state === ROOM_STATE.RESOLVED || room.state === ROOM_STATE.EXPIRED) && (
         <div className="flex flex-col gap-3">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-white/60">
-            {room.state === ROOM_STATE.RESOLVED
-              ? "This game has already been resolved."
-              : "This game expired — host never revealed."}
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-center">
+            <p className="text-sm text-zinc-400">
+              {room.state === ROOM_STATE.RESOLVED
+                ? "This game has already been resolved."
+                : "This game expired — host never revealed."}
+            </p>
             {(isPlayerA || isPlayerB) && (
               <Link
                 href={`/game/${params.roomId}`}
-                className="mt-2 block text-xs text-celo-yellow underline"
+                className="mt-2 inline-block text-xs text-celo-yellow underline"
               >
                 View result →
               </Link>
@@ -515,7 +548,7 @@ export default function JoinRoomPage() {
           </div>
           <Link
             href="/create"
-            className="rounded-2xl border border-white/15 py-4 text-center font-semibold text-white active:opacity-80"
+            className="rounded-2xl border border-zinc-700 py-4 text-center font-semibold text-zinc-300 active:opacity-80"
           >
             Create a new room
           </Link>
