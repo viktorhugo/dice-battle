@@ -1,17 +1,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Medal, Search, Check, Zap } from "lucide-react";
+import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TRUST_BADGES = [
-  { label: "Provably Fair" },
-  { label: "Fully On-Chain" },
-  { label: "Instant Payouts" },
-  { label: "Built on Celo" },
-] as const;
+  { label: "Provably Fair",  Icon: ShieldCheck,      accent: "#00C4B3" },
+  { label: "Fully On-Chain", Icon: Blocks,           accent: "#FCFF52" },
+  { label: "Instant Payouts",Icon: BanknoteArrowUp,  accent: "#00C4B3" },
+  { label: "Built on Celo",  Icon: Globe,            accent: "#FCFF52" },
+];
 
 const HOW_IT_WORKS = [
   { n: "01", title: "Create & Stake",   desc: "Set your bet in USDm or USDT and open a room.",                          accent: "#FCFF52" },
@@ -26,7 +26,7 @@ export default function Home() {
       <WalletBar />
 
       {/* ── Hero ── */}
-      <header className="relative flex flex-col items-center gap-5 text-center overflow-hidden" style={{ borderRadius: "100px 1px 100px 54px" }}>
+      <header className="relative flex flex-col items-center gap-5 text-center overflow-hidden" style={{ borderRadius: "100px 1px 100px 40px" }}>
         {/* Glow amarillo detrás dado izquierdo */}
         <div
           aria-hidden
@@ -73,17 +73,19 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Trust Badges ── */}
-      <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar -mx-4 px-4">
-        {TRUST_BADGES.map(({ label }) => (
-          <span
-            key={label}
-            className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[10px] text-white/50 backdrop-blur-sm"
-          >
-            <Check className="h-2.5 w-2.5 shrink-0" style={{ color: "#00C4B3" }} />
-            {label}
-          </span>
-        ))}
+      {/* ── Trust Badges — marquee ── */}
+      <div className="overflow-hidden -mx-4" aria-hidden>
+        <div className="flex w-max gap-2 animate-marquee">
+          {[...TRUST_BADGES, ...TRUST_BADGES].map(({ label, Icon, accent }, i) => (
+            <span
+              key={i}
+              className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[10px] text-white/50 backdrop-blur-sm"
+            >
+              <Icon className="h-2.5 w-2.5 shrink-0" style={{ color: accent }} />
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* ── Live Stats ── */}

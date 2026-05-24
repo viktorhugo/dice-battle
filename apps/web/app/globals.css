@@ -50,12 +50,18 @@ body {
   50%       { box-shadow: 0 0 18px #FCFF5275, 0 0 34px #FCFF5235; }
 }
 
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   @keyframes ghostPip        { from, to { opacity: 0.1; } }
   @keyframes diceFloat       { from, to { transform: none; } }
   @keyframes diceFloatReverse { from, to { transform: none; } }
   @keyframes pulseGlow       { from, to { opacity: 0.25; } }
   @keyframes btnGlow         { from, to { box-shadow: 0 0 20px #FCFF5230; } }
+  @keyframes marquee         { from, to { transform: none; } }
 }
 
 @layer utilities {
@@ -66,6 +72,7 @@ body {
   .animate-pulse-glow        { animation: pulseGlow 3s ease-in-out infinite; }
   .animate-btn-glow          { animation: btnGlow 2.5s ease-in-out infinite; }
   .animate-neon-glow         { animation: neonBorderGlow 2.2s ease-in-out infinite; }
+  .animate-marquee           { animation: marquee 18s linear infinite; }
 }
 
 @layer base {
