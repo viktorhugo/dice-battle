@@ -22,6 +22,7 @@ import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } fr
 import Image from "next/image";
 import { getOpenRoomsPage, getRoomsCreatedAt, type IndexerRoom } from "@/lib/indexer";
 import { clearSecret } from "@/lib/commitment";
+import { Zap } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 const PAGE_SIZE = 10;
@@ -475,9 +476,14 @@ export default function RoomsPage() {
         <div className="mx-auto w-full max-w-md">
           <Link
             href="/create"
-            className="block w-full rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
+            className="group relative overflow-hidden flex items-center justify-center gap-2 w-full rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] animate-btn-glow"
+            style={{ background: "#FCFF52" }}
           >
-            Create a room
+            <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
+            <span className="relative z-10 flex items-center gap-2">
+              <Zap className="h-5 w-5 fill-current" />
+              Create a room
+            </span>
           </Link>
         </div>
       </div>

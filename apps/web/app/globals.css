@@ -25,15 +25,52 @@ body {
   50%       { opacity: 0.22; }
 }
 
+@keyframes diceFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-6px) rotate(4deg); }
+}
+
+@keyframes diceFloatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-6px) rotate(-4deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.35; }
+}
+
+@keyframes btnGlow {
+  0%, 100% { box-shadow: 0 0 20px #FCFF5230, 0 4px 16px #FCFF5215; }
+  50%       { box-shadow: 0 0 36px #FCFF5250, 0 4px 24px #FCFF5230; }
+}
+
+@keyframes neonBorderGlow {
+  0%, 100% { box-shadow: 0 0 6px #FCFF5245, 0 0 16px #FCFF5215; }
+  50%       { box-shadow: 0 0 18px #FCFF5275, 0 0 34px #FCFF5235; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  @keyframes ghostPip {
-    from, to { opacity: 0.1; }
-  }
+  @keyframes ghostPip        { from, to { opacity: 0.1; } }
+  @keyframes diceFloat       { from, to { transform: none; } }
+  @keyframes diceFloatReverse { from, to { transform: none; } }
+  @keyframes pulseGlow       { from, to { opacity: 0.25; } }
+  @keyframes btnGlow         { from, to { box-shadow: 0 0 20px #FCFF5230; } }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .animate-dice-float        { animation: diceFloat 3.2s ease-in-out infinite; }
+  .animate-dice-float-reverse { animation: diceFloatReverse 3.2s ease-in-out infinite 1.6s; }
+  .animate-pulse-glow        { animation: pulseGlow 3s ease-in-out infinite; }
+  .animate-btn-glow          { animation: btnGlow 2.5s ease-in-out infinite; }
+  .animate-neon-glow         { animation: neonBorderGlow 2.2s ease-in-out infinite; }
 }
 
 @layer base {
   .theme {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-heading);
     --font-sans: var(--font-sans);
   }
   :root {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { parseUnits, decodeEventLog } from "viem";
@@ -10,10 +11,11 @@ import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackup
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { computeCommitment, generateSecret, storeSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS, getTokenAddress, TOKEN_KEYS, TokenKey } from "@/lib/constants";
+import { getTokenIcon } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
-import { Spinner } from "@/components/ui/spinner"
-import { CheckCheck } from 'lucide-react';
+import { Spinner } from "@/components/ui/spinner";
+import { CheckCheck, Dices } from "lucide-react";
 
 const GRID_COLS: Record<number, string> = {
   1: "grid-cols-1",
@@ -28,6 +30,18 @@ const STAKE_PRESETS = [
   { label: "2.00", value: "2" },
   { label: "5.00", value: "5" },
 ];
+
+const TOKEN_SELECTED_CLS: Record<string, string> = {
+  USDm: "border-[#5118C1] bg-[#5118C1]/10 text-purple-200",
+  USDT: "border-teal-500/80 bg-teal-500/10 text-teal-200",
+  USDC: "border-blue-500/80 bg-blue-500/10 text-blue-200",
+};
+
+const TOKEN_CARD_BORDER: Record<string, string> = {
+  USDm: "border-[#5118C1]/25",
+  USDT: "border-teal-500/25",
+  USDC: "border-blue-500/25",
+};
 
 export default function CreateRoomPage() {
   const router = useRouter();
@@ -202,73 +216,81 @@ export default function CreateRoomPage() {
     }
   }
 
+  const tokenIcon = getTokenIcon(tokenAddress);
+  const cardBorder = TOKEN_CARD_BORDER[token] ?? "border-zinc-700/40";
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <WalletBar />
-      
-      {
-        pendingRoom && (
-          <SecretBackupModal
-            roomId={pendingRoom.roomId}
-            secret={pendingRoom.secret}
-            onDismiss={() => router.push(`/join/${pendingRoom.roomId}`)}
-          />
-        )
-      }
+
+      {pendingRoom && (
+        <SecretBackupModal
+          roomId={pendingRoom.roomId}
+          secret={pendingRoom.secret}
+          onDismiss={() => router.push(`/join/${pendingRoom.roomId}`)}
+        />
+      )}
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">
+        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
           ← Back
         </Link>
         <h1 className="text-lg font-semibold">Create room</h1>
         <div className="w-10" />
       </header>
 
+      {/* Token selector */}
       <section className="flex flex-col gap-2">
-        <label className="text-xs font-medium uppercase tracking-wider text-white/50">
+        <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
           Token
         </label>
         <div className={`grid ${GRID_COLS[TOKEN_KEYS.length] ?? "grid-cols-2"} gap-2`}>
-          {
-            TOKEN_KEYS.map((key) => (
+          {TOKEN_KEYS.map((key) => {
+            const isActive = key === token;
+            const activeCls = TOKEN_SELECTED_CLS[key] ?? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow";
+            return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setToken(key)}
-                className={`rounded-xl border py-3 text-sm font-semibold ${
-                  key === token
-                    ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
-                    : "border-white/10 text-white/70"
+                className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors ${
+                  isActive ? activeCls : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
                 }`}
               >
+                <Image
+                  src={getTokenIcon(getTokenAddress(key))}
+                  alt={key}
+                  width={18}
+                  height={18}
+                  className="rounded-full"
+                />
                 {key}
               </button>
-            ))
-          }
+            );
+          })}
         </div>
       </section>
 
+      {/* Stake selector */}
       <section className="flex flex-col gap-2">
-        <label className="text-xs font-medium uppercase tracking-wider text-white/50">
+        <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
           Stake
         </label>
         <div className="grid grid-cols-4 gap-2">
-          {
-            STAKE_PRESETS.map( (stakePreset) => (
-              <button
-                key={stakePreset.value}
-                type="button"
-                onClick={() => setStake(stakePreset.value)}
-                className={`rounded-xl border py-2 text-sm font-semibold ${
-                  stake === stakePreset.value
-                    ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
-                    : "border-white/10 text-white/70"
-                }`}
-              >
-                {stakePreset.label}
-              </button>
-            ))
-          }
+          {STAKE_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => setStake(preset.value)}
+              className={`rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                stake === preset.value
+                  ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
+                  : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
         <input
           type="number"
@@ -277,84 +299,81 @@ export default function CreateRoomPage() {
           min="0.01"
           value={stake}
           onChange={(e) => setStake(e.target.value)}
-          className="mt-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-sm focus:border-celo-yellow focus:outline-none"
+          className="mt-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-celo-yellow focus:outline-none transition-colors"
           placeholder="Custom amount"
         />
       </section>
 
-      <section className="rounded-xl bg-white/5 p-4 text-xs text-white/60">
-        <div className="flex justify-between">
-          <span> Your stake </span>
-          <span className="font-mono">
-            {stake} {token}
-          </span>
+      {/* Summary card */}
+      <section className={`relative overflow-hidden rounded-2xl border bg-zinc-900/80 backdrop-blur-md p-4 ${cardBorder}`}>
+        {/* Token watermark */}
+        <Image
+          src={tokenIcon}
+          alt=""
+          width={100}
+          height={100}
+          aria-hidden
+          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-30"
+        />
+        <div className="relative flex flex-col gap-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-zinc-500">Your stake</span>
+            <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">Opponent matches</span>
+            <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
+          </div>
+          <div className="mt-1 flex justify-between border-t border-zinc-800 pt-2.5 font-semibold">
+            <span className="text-zinc-400">If you win</span>
+            <span className="font-mono text-green-400">
+              ~{stakeValid ? (Number(stake) * 1.96).toFixed(2) : "0.00"} {token}
+            </span>
+          </div>
+          <p className="text-[10px] text-zinc-600">Protocol fee: 2% of pot</p>
         </div>
-        <div className="flex justify-between">
-          <span> Opponent matches </span>
-          <span className="font-mono">
-            {stake} {token}
-          </span>
-        </div>
-        <div className="mt-2 flex justify-between border-t border-white/10 pt-2 font-semibold text-white">
-          <span> If you win </span>
-          <span className="font-mono">
-            ~{(Number(stake) * 1.96).toFixed(2)} {token}
-          </span>
-        </div>
-        <div className="mt-0.5 text-[10px] text-white/40"> Protocol fee: 2% of pot </div>
       </section>
 
-      {
-          error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
-            {error}
-          </div>
-        )
-      }
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+          {error}
+        </div>
+      )}
 
+      {/* Allowance indicator */}
       <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
         allowanceReady
           ? "border-green-500/20 bg-green-500/5 text-green-400"
-          : "border-white/10 bg-white/5 text-white/50"
+          : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
       }`}>
-        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-white/30"}`} />
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
         {allowanceReady
           ? "Ready — 1 transaction to confirm"
-          : `Needs approval + create — 2 transactions`}
+          : "Needs approval + create — 2 transactions"}
       </div>
 
+      {/* CTA */}
       <button
         type="button"
         disabled={!isConnected || busy || tokenDecimals == null}
         onClick={onCreate}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+        className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
+        style={{ background: "#FCFF52" }}
       >
-        {
-          step === "approving" && (
-            <>
-              <Spinner /> Approving…
-            </>
-          )
-        }
-        {
-          step === "creating" && (
-            <>
-              <Spinner /> Creating room…
-            </>
-          )
-        }
-        {
-          step === "done" && (
-            <>
-              Done room created! <CheckCheck  />
-            </>
-          )
-        }
-        {step === "idle" && (
-          !isConnected ? "Connect wallet"
-          : tokenDecimals == null ? "Loading…"
-          : "Create and stake"
-        )}
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10"
+        />
+        <span className="relative z-10 flex items-center gap-2">
+          {step === "approving" && <><Spinner /> Approving…</>}
+          {step === "creating" && <><Spinner /> Creating room…</>}
+          {step === "done" && <>Room created! <CheckCheck /></>}
+          {step === "idle" && (
+            !isConnected ? "Connect wallet"
+            : tokenDecimals == null ? "Loading…"
+            : <><Dices className="h-5 w-5" /> Create and stake</>
+          )}
+        </span>
       </button>
     </div>
   );

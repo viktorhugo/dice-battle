@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import ContextProvider from "./context/wagmi-provider";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-heading',
+  weight: ['500', '600', '700'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000"),
@@ -23,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cookies = headersObj.get("cookie");
 
   return (
-    <html lang="es" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
+    <html lang="es" suppressHydrationWarning className={cn("font-sans", inter.variable, spaceGrotesk.variable)}>
       <head>
         <meta
           name="talentapp:project_verification"

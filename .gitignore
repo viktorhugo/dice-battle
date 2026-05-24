@@ -47,3 +47,4 @@ lcov.info
 
 # Local agents
 .agents
+.claude
