@@ -375,82 +375,79 @@ export default function RoomsPage() {
               <ul className="flex flex-col gap-3">
                 {myPagedRooms.map((room) => {
                   const isMatched = room.state === ROOM_STATE.MATCHED;
-                  const cardBorder = isMatched
-                    ? "border-amber-500/35 border-2 hover:border-amber-400/55"
-                    : "border-zinc-700/40 border-2 hover:border-zinc-500/60";
                   const symbol = room.token ? getTokenSymbol(room.token) : null;
+
+                  // Contenido compartido entre matched y non-matched
+                  const cardContent = (
+                    <>
+                      {/* Watermark derecho — mitad visible */}
+                      {room.token && (
+                        <Image
+                          src={getTokenIcon(room.token)}
+                          alt=""
+                          width={90}
+                          height={90}
+                          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
+                          aria-hidden
+                        />
+                      )}
+
+                      {/* Izquierda: jerarquía de texto */}
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-semibold tracking-wide text-white">
+                          Room #{room.id}
+                        </span>
+                        <span className={`text-xs font-medium ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
+                          {isMatched ? "⚡ Ready to reveal" : "⏳ Waiting for opponent"}
+                        </span>
+                        {room.token && room.stake != null && symbol && (
+                          <span className="text-xs mt-1 text-zinc-500 flex items-center gap-1.5 rounded-full py-1 font-bold backdrop-blur-sm">
+                            <Image
+                              src={getTokenIcon(room.token)}
+                              alt={symbol}
+                              width={18}
+                              height={18}
+                              className="rounded-full"
+                            />
+                            {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
+                          </span>
+                        )}
+                        {room.createdAt && (
+                          <span className="text-[11px] text-zinc-600 mt-0.5">
+                            {formatDate(room.createdAt)} ({timeAgo(room.createdAt)})
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Derecha: CTA */}
+                      <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
+                        {isMatched ? "Roll dice →" : "View →"}
+                      </span>
+                    </>
+                  );
+
                   return (
                     <li key={room.id}>
-                      <Link
-                        href={isMatched ? `/game/${room.id}` : `/join/${room.id}`}
-                        className={`relative flex items-center justify-between overflow-hidden rounded-2xl border bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70 ${cardBorder}`}
-                      >
-                        {/* Watermark derecho — mitad visible */}
-                        {room.token && (
-                          <Image
-                            src={getTokenIcon(room.token)}
-                            alt=""
-                            width={90}
-                            height={90}
-                            className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
-                            aria-hidden
-                          />
-                        )}
-
-                        {/* Izquierda: jerarquía de texto */}
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-semibold tracking-wide text-white">
-                            Room #{room.id}
-                          </span>
-                          <span className={`text-xs font-medium ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
-                            {isMatched ? "⚡ Ready to reveal" : "⏳ Waiting for opponent"}
-                          </span>
-                          {room.token && room.stake != null && symbol && (
-                            <span className="text-xs mt-1 text-zinc-500 flex items-center gap-1.5 rounded-full py-1 font-bold backdrop-blur-sm">
-                              <Image
-                                src={getTokenIcon(room.token)}
-                                alt={symbol}
-                                width={18}
-                                height={18}
-                                className="rounded-full"
-                              />
-                              {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
-                            </span>
-                          )}
-                          {room.createdAt && (
-                            <span className="text-[11px] text-zinc-600 mt-0.5">
-                              {formatDate(room.createdAt)} ({timeAgo(room.createdAt)})
-                            </span>
-                          )}
+                      {isMatched ? (
+                        /* Wrapper con gap de 2px — los BorderBeam son visibles en esa franja */
+                        <div className="relative overflow-hidden rounded-2xl p-[2px]">
+                          <BorderBeam colorFrom="#FCFF52" colorTo="#00C4B3" duration={3} size={80} />
+                          <BorderBeam colorFrom="#00C4B3" colorTo="#FCFF52" duration={3} size={80} reverse initialOffset={50} />
+                          <Link
+                            href={`/game/${room.id}`}
+                            className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"
+                          >
+                            {cardContent}
+                          </Link>
                         </div>
-
-                        {/* Derecha: CTA */}
-                        <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
-                          {isMatched ? "Roll dice →" : "View →"}
-                        </span>
-
-                        {/* Dual BorderBeam solo en cards listas para revelar */}
-                        {isMatched && (
-                          <>
-                            <BorderBeam
-                              colorFrom="#FCFF52"
-                              colorTo="#00C4B3"
-                              duration={3}
-                              size={80}
-                              borderWidth={2}
-                            />
-                            <BorderBeam
-                              colorFrom="#00C4B3"
-                              colorTo="#FCFF52"
-                              duration={3}
-                              size={80}
-                              borderWidth={2}
-                              reverse
-                              initialOffset={50}
-                            />
-                          </>
-                        )}
-                      </Link>
+                      ) : (
+                        <Link
+                          href={`/join/${room.id}`}
+                          className="relative flex items-center justify-between overflow-hidden rounded-2xl border-2 border-zinc-700/40 hover:border-zinc-500/60 bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"
+                        >
+                          {cardContent}
+                        </Link>
+                      )}
                     </li>
                   );
                 })}
