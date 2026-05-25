@@ -20,11 +20,13 @@ import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { getTokenDecimals, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
 import Image from "next/image";
-import { getOpenRoomsPage, getRoomsCreatedAt, type IndexerRoom } from "@/lib/indexer";
+import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, type IndexerRoom } from "@/lib/indexer";
 import { clearSecret } from "@/lib/commitment";
 import { Zap } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { logger } from "@/lib/logger";
+import { ComicText } from '../../components/ui/comic-text';
+import { WordRotate } from "@/components/ui/word-rotate";
 
 const PAGE_SIZE = 10;
 const SECRET_PREFIX = "dice-battle:secret:";
@@ -69,7 +71,7 @@ function buildPageRange(current: number, total: number): (number | "ellipsis")[]
 
 export default function RoomsPage() {
   const publicClient = usePublicClient();
-  const { address } = useConnection();
+  const { address, status } = useConnection();
   const searchParams = useSearchParams();
 
   const [tab, setTab] = useState<Tab>(
@@ -108,45 +110,80 @@ export default function RoomsPage() {
   }, [page, address]);
 
   useEffect(() => {
-    const stored = getStoredRoomIds();
-    if (!publicClient || stored.length === 0) {
+    // Si el wallet todavía está reconectando, esperar — no mostrar vacío prematuramente
+    if (status === "connecting" || status === "reconnecting") return;
+
+    if (!publicClient) {
       setMyRoomsLoading(false);
       return;
     }
 
-    Promise.all(
-      stored.map(async (id) => {
-        try {
-          const result = (await publicClient.readContract({
-            address: GAME_ADDRESS,
-            abi: DICE_BATTLE_ABI,
-            functionName: "rooms",
-            args: [BigInt(id)],
-          })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number];
+    setMyRoomsLoading(true);
+    const stored = getStoredRoomIds();
 
-          const state = result[6];
-          if (state === ROOM_STATE.OPEN || state === ROOM_STATE.MATCHED) {
-            return { id, state, token: result[2], stake: result[3] } as ActiveRoom;
-          }
-          clearSecret(id);
-          return null;
-        } catch {
-          return { id, state: ROOM_STATE.OPEN } as ActiveRoom;
-        }
-      })
-    ).then(async (results) => {
-      const active = results.filter((r): r is ActiveRoom => r !== null);
+    // Fetch from localStorage + indexer (by wallet) in parallel
+    const fromLocalStorage = stored.length > 0
+      ? Promise.all(
+          stored.map(async (id) => {
+            try {
+              const result = (await publicClient.readContract({
+                address: GAME_ADDRESS,
+                abi: DICE_BATTLE_ABI,
+                functionName: "rooms",
+                args: [BigInt(id)],
+              })) as readonly [`0x${string}`, `0x${string}`, `0x${string}`, bigint, bigint, `0x${string}`, number];
+
+              const state = result[6];
+              if (state === ROOM_STATE.OPEN || state === ROOM_STATE.MATCHED) {
+                return { id, state, token: result[2], stake: result[3] } as ActiveRoom;
+              }
+              clearSecret(id);
+              return null;
+            } catch {
+              return { id, state: ROOM_STATE.OPEN } as ActiveRoom;
+            }
+          })
+        )
+      : Promise.resolve([] as (ActiveRoom | null)[]);
+
+    const fromIndexer = address
+      ? getActiveRoomsByPlayer(address).catch(() => [])
+      : Promise.resolve([]);
+
+    Promise.all([fromLocalStorage, fromIndexer]).then(async ([localResults, indexerRooms]) => {
+      const localActive = localResults.filter((r): r is ActiveRoom => r !== null);
+
+      // Merge: indexer rooms that aren't already in localStorage list
+      const localIds = new Set(localActive.map((r) => r.id));
+      const stateMap: Record<string, number> = { OPEN: ROOM_STATE.OPEN, MATCHED: ROOM_STATE.MATCHED };
+      const indexerActive: ActiveRoom[] = indexerRooms
+        .filter((r) => !localIds.has(r.id))
+        .map((r) => ({
+          id: r.id,
+          state: (stateMap[r.state] ?? ROOM_STATE.OPEN) as 1 | 2,
+          token: r.token,
+          stake: BigInt(r.stake),
+          createdAt: Number(r.createdAt),
+        }));
+
+      const merged = [...localActive, ...indexerActive];
+
       try {
-        const timestamps = await getRoomsCreatedAt(active.map((r) => r.id));
-        const withDates = active.map((r) => ({ ...r, createdAt: timestamps[r.id] }));
-        withDates.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-        setMyRooms(withDates);
-      } catch {
-        setMyRooms(active);
-      }
+        // Fill missing createdAt for localStorage rooms
+        const needDates = merged.filter((r) => !r.createdAt).map((r) => r.id);
+        if (needDates.length > 0) {
+          const timestamps = await getRoomsCreatedAt(needDates);
+          merged.forEach((r) => {
+            if (!r.createdAt && timestamps[r.id]) r.createdAt = timestamps[r.id];
+          });
+        }
+      } catch { /* ignore */ }
+
+      merged.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      setMyRooms(merged);
       setMyRoomsLoading(false);
     });
-  }, [publicClient]);
+  }, [publicClient, address, status]);
 
   function goTo(p: number) {
     if (p < 1 || p > totalPages || p === page) return;
@@ -421,7 +458,16 @@ export default function RoomsPage() {
 
                       {/* Derecha: CTA */}
                       <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
-                        {isMatched ? "Roll dice →" : "View →"}
+                        { 
+                          isMatched 
+                            ? <>
+                              <WordRotate
+                                  className="text-sm font-bold text-amber dark:text-amber"
+                                  words={["Go", "Roll Dices ->"]}
+                                />
+                              </>
+                            : "View →"
+                        }
                       </span>
                     </>
                   );
@@ -431,8 +477,8 @@ export default function RoomsPage() {
                       {isMatched ? (
                         /* Wrapper con gap de 2px — los BorderBeam son visibles en esa franja */
                         <div className="relative overflow-hidden rounded-2xl p-[2px]">
-                          <BorderBeam colorFrom="#FCFF52" colorTo="#00C4B3" duration={3} size={80} />
-                          <BorderBeam colorFrom="#00C4B3" colorTo="#FCFF52" duration={3} size={80} reverse initialOffset={50} />
+                          <BorderBeam colorFrom="#FCFF52" colorTo="#00C4B3" duration={3} size={80} height={10} />
+                          <BorderBeam colorFrom="#00C4B3" colorTo="#FCFF52" duration={3} size={80} height={10} reverse initialOffset={50} />
                           <Link
                             href={`/game/${room.id}`}
                             className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"

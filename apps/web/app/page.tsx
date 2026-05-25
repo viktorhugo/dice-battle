@@ -101,7 +101,9 @@ export default function Home() {
           </div>
         }
       >
-        <LiveStats />
+      
+      <LiveStats />
+      
       </Suspense>
 
       {/* ── CTA Bento Grid ── */}

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { WalletBar } from "@/components/WalletBar";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -122,7 +123,11 @@ function LeaderboardRow({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LeaderboardPage() {
-  const [tab, setTab] = useState<LeaderboardTab>("alltime");
+  const searchParams = useSearchParams();
+  const initialTab = (["today", "week", "alltime"].includes(searchParams.get("period") ?? "")
+    ? searchParams.get("period")
+    : "alltime") as LeaderboardTab;
+  const [tab, setTab] = useState<LeaderboardTab>(initialTab);
   const [sort, setSort] = useState<SortKey>("wins");
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);

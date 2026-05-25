@@ -12,6 +12,10 @@ interface BorderBeamProps {
   /**
    * The duration of the border beam.
    */
+  height?: number
+  /**
+   * The duration of the border beam.
+   */
   duration?: number
   /**
    * The delay of the border beam.
@@ -54,6 +58,7 @@ interface BorderBeamProps {
 export const BorderBeam = ({
   className,
   size = 50,
+  height = 10,
   delay = 0,
   duration = 6,
   colorFrom = "#ffaa40",
@@ -69,6 +74,7 @@ export const BorderBeam = ({
       style={
         {
           width: size,
+          height: height,
           offsetPath: `rect(0 auto auto 0 round 16px)`,
           background: `linear-gradient(to left, ${colorFrom}, ${colorTo}, transparent)`,
           ...style,

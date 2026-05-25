@@ -190,7 +190,15 @@ const LIVE_STATS_QUERY = gql`
     openRooms: Room(where: { state: { _eq: "OPEN" } }, limit: 500) {
       id
     }
-    gamesToday: Room(where: { createdAt: { _gte: $since } }, limit: 500) {
+    gamesToday: Room(
+      where: {
+        _and: [
+          { resolvedAt: { _gte: $since } }
+          { state: { _in: ["RESOLVED", "TIED"] } }
+        ]
+      }
+      limit: 500
+    ) {
       id
     }
     totalGames: Room(
@@ -215,7 +223,15 @@ const LIVE_STATS_FILTERED_QUERY = gql`
     ) {
       id
     }
-    gamesToday: Room(where: { createdAt: { _gte: $since } }, limit: 500) {
+    gamesToday: Room(
+      where: {
+        _and: [
+          { resolvedAt: { _gte: $since } }
+          { state: { _in: ["RESOLVED", "TIED"] } }
+        ]
+      }
+      limit: 500
+    ) {
       id
     }
     totalGames: Room(
@@ -454,6 +470,43 @@ export async function getRoomsCreatedAt(ids: string[]): Promise<Record<string, n
     { ids }
   );
   return Object.fromEntries(data.Room.map((r) => [r.id, Number(r.createdAt)]));
+}
+
+export type ActiveIndexerRoom = {
+  id: string;
+  state: string;
+  token: string;
+  stake: string;
+  createdAt: string;
+};
+
+const ACTIVE_ROOMS_BY_PLAYER_QUERY = gql`
+  query ActiveRoomsByPlayer($address: String!) {
+    Room(
+      where: {
+        _and: [
+          { playerA: { _eq: $address } }
+          { state: { _in: ["OPEN", "MATCHED"] } }
+        ]
+      }
+      order_by: { createdAt: desc }
+      limit: 50
+    ) {
+      id
+      state
+      token
+      stake
+      createdAt
+    }
+  }
+`;
+
+export async function getActiveRoomsByPlayer(address: string): Promise<ActiveIndexerRoom[]> {
+  const data = await indexer.request<{ Room: ActiveIndexerRoom[] }>(
+    ACTIVE_ROOMS_BY_PLAYER_QUERY,
+    { address: address.toLowerCase() }
+  );
+  return data.Room;
 }
 
 export type H2HSummary = { myWins: number; theirWins: number; ties: number };

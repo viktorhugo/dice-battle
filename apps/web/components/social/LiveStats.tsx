@@ -121,8 +121,8 @@ export function LiveStats() {
       )}
       <StatItem
         value={stats.gamesToday}
-        label="Games today"
-        href="/leaderboard"
+        label="Played today"
+        href="/leaderboard?period=today"
         className="border-r border-white/10 py-3"
       />
       <StatItem value={stats.totalGames} label="All-time" href="/leaderboard" className="py-3" />
