@@ -23,6 +23,7 @@ import Image from "next/image";
 import { getOpenRoomsPage, getRoomsCreatedAt, type IndexerRoom } from "@/lib/indexer";
 import { clearSecret } from "@/lib/commitment";
 import { Zap } from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
 import { logger } from "@/lib/logger";
 
 const PAGE_SIZE = 10;
@@ -427,6 +428,28 @@ export default function RoomsPage() {
                         <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
                           {isMatched ? "Roll dice →" : "View →"}
                         </span>
+
+                        {/* Dual BorderBeam solo en cards listas para revelar */}
+                        {isMatched && (
+                          <>
+                            <BorderBeam
+                              colorFrom="#FCFF52"
+                              colorTo="#00C4B3"
+                              duration={3}
+                              size={80}
+                              borderWidth={2}
+                            />
+                            <BorderBeam
+                              colorFrom="#00C4B3"
+                              colorTo="#FCFF52"
+                              duration={3}
+                              size={80}
+                              borderWidth={2}
+                              reverse
+                              initialOffset={50}
+                            />
+                          </>
+                        )}
                       </Link>
                     </li>
                   );

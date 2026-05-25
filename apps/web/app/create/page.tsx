@@ -15,7 +15,7 @@ import { getTokenIcon } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCheck, Dices } from "lucide-react";
+import { CheckCheck, Rocket } from "lucide-react";
 
 const GRID_COLS: Record<number, string> = {
   1: "grid-cols-1",
@@ -371,7 +371,7 @@ export default function CreateRoomPage() {
           {step === "idle" && (
             !isConnected ? "Connect wallet"
             : tokenDecimals == null ? "Loading…"
-            : <><Dices className="h-5 w-5" /> Create and stake</>
+            : <><Rocket className="h-5 w-5" /> Create and stake</>
           )}
         </span>
       </button>
