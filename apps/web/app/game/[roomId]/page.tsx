@@ -310,7 +310,14 @@ export default function GamePage() {
         <h1 className="font-heading text-base font-semibold tracking-wide">
           Room <span style={{ color: "#FCFF52" }}>#{params.roomId}</span>
         </h1>
-        <div className="w-10" />
+        {room.state === ROOM_STATE.MATCHED ? (
+          <div className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="font-mono text-[9px] text-green-400 uppercase tracking-widest">Live</span>
+          </div>
+        ) : (
+          <div className="w-10" />
+        )}
       </header>
 
       {/* Created at row */}
@@ -324,13 +331,7 @@ export default function GamePage() {
       )}
 
       {/* Dice arena */}
-      <section className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm px-4 pt-8 pb-5 flex flex-col gap-4">
-        {/* LIVE badge */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="font-mono text-[9px] text-green-400 uppercase tracking-widest">Live</span>
-        </div>
-
+      <section className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm px-4 pt-5 pb-5 flex flex-col gap-4">
         {/* Ambient glows */}
         <div aria-hidden className="pointer-events-none absolute left-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-20" style={{ background: "#FCFF52" }} />
         <div aria-hidden className="pointer-events-none absolute right-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-15" style={{ background: "#00C4B3" }} />

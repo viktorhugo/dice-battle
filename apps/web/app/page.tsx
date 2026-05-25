@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe } from "lucide-react";
+import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarChart2 } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -143,6 +143,20 @@ export default function Home() {
           <span className="flex flex-col items-center gap-2">
             <Medal className="h-5 w-5" style={{ color: "#FCFF52" }} />
             <span className="font-heading text-sm font-semibold text-white">Leaderboard</span>
+          </span>
+        </Link>
+
+        {/* Protocol Stats */}
+        <Link
+          href="/stats"
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border border-[#FCFF52]/20 bg-gradient-to-r from-[#FCFF52]/5 to-[#00C4B3]/5 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/35 hover:from-[#FCFF52]/10 hover:to-[#00C4B3]/10"
+        >
+          <span className="flex items-center justify-center gap-2">
+            <BarChart2 className="h-4 w-4 transition-colors" style={{ color: "#FCFF52" }} />
+            <span className="font-heading text-sm font-semibold text-white/65 transition-colors group-hover:text-white/85">
+              Protocol Stats
+            </span>
+            <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
           </span>
         </Link>
       </div>

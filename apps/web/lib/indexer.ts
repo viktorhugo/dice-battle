@@ -532,6 +532,82 @@ export async function getHeadToHead(
   return { myWins, theirWins, ties };
 }
 
+// ─── Contract Stats ───────────────────────────────────────────────────────────
+
+export type RecentGame = {
+  id: string;
+  state: string;
+  winner: string | null;
+  playerA: string;
+  playerB: string | null;
+  stake: string;
+  token: string;
+  resolvedAt: string | null;
+};
+
+export type ContractStats = {
+  open: number;
+  matched: number;
+  resolved: number;
+  tied: number;
+  expired: number;
+  totalFinished: number;
+  volumeByToken: Record<string, bigint>;
+  recentGames: RecentGame[];
+};
+
+const CONTRACT_STATS_QUERY = gql`
+  query ContractStats {
+    openRooms: Room(where: { state: { _eq: "OPEN" } }, limit: 500) { id }
+    matchedRooms: Room(where: { state: { _eq: "MATCHED" } }, limit: 500) { id }
+    resolvedRooms: Room(where: { state: { _eq: "RESOLVED" } }, limit: 9999) { stake token }
+    tiedRooms: Room(where: { state: { _eq: "TIED" } }, limit: 9999) { stake token }
+    expiredRooms: Room(where: { state: { _eq: "EXPIRED" } }, limit: 500) { id }
+    recentGames: Room(
+      where: { state: { _in: ["RESOLVED", "TIED"] } }
+      order_by: { resolvedAt: desc }
+      limit: 15
+    ) {
+      id
+      state
+      winner
+      playerA
+      playerB
+      stake
+      token
+      resolvedAt
+    }
+  }
+`;
+
+export async function getContractStats(): Promise<ContractStats> {
+  const data = await indexer.request<{
+    openRooms: { id: string }[];
+    matchedRooms: { id: string }[];
+    resolvedRooms: { stake: string; token: string }[];
+    tiedRooms: { stake: string; token: string }[];
+    expiredRooms: { id: string }[];
+    recentGames: RecentGame[];
+  }>(CONTRACT_STATS_QUERY);
+
+  const volumeByToken: Record<string, bigint> = {};
+  for (const room of [...data.resolvedRooms, ...data.tiedRooms]) {
+    const key = room.token.toLowerCase();
+    volumeByToken[key] = (volumeByToken[key] ?? 0n) + BigInt(room.stake);
+  }
+
+  return {
+    open: data.openRooms.length,
+    matched: data.matchedRooms.length,
+    resolved: data.resolvedRooms.length,
+    tied: data.tiedRooms.length,
+    expired: data.expiredRooms.length,
+    totalFinished: data.resolvedRooms.length + data.tiedRooms.length,
+    volumeByToken,
+    recentGames: data.recentGames,
+  };
+}
+
 export async function getLeaderboardPeriod(sinceSeconds: number): Promise<LeaderboardEntry[]> {
   const data = await indexer.request<{ Room: IndexerPeriodRoom[] }>(
     LEADERBOARD_PERIOD_QUERY,
