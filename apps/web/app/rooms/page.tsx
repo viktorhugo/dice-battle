@@ -70,6 +70,126 @@ function buildPageRange(current: number, total: number): (number | "ellipsis")[]
   return pages;
 }
 
+function RoomCard({
+  room,
+  copiedRoomId,
+  onCopy,
+}: {
+  room: ActiveRoom;
+  copiedRoomId: string | null;
+  onCopy: (id: string, secret: string) => void;
+}) {
+  const isMatched = room.state === ROOM_STATE.MATCHED;
+  const isGuest = room.role === "guest";
+  const symbol = room.token ? getTokenSymbol(room.token) : null;
+  const roomSecret = loadSecret(room.id);
+
+  const cardContent = (
+    <>
+      {room.token && (
+        <Image
+          src={getTokenIcon(room.token)}
+          alt=""
+          width={90}
+          height={90}
+          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
+          aria-hidden
+        />
+      )}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-semibold tracking-wide text-white">Room #{room.id}</span>
+        {room.token && room.stake != null && symbol && (
+          <span className="text-xs mt-0.5 text-zinc-500 flex items-center gap-1.5 font-bold">
+            <Image src={getTokenIcon(room.token)} alt={symbol} width={14} height={14} className="rounded-full" />
+            {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
+          </span>
+        )}
+        {room.createdAt && (
+          <span className="text-[11px] text-zinc-600 mt-0.5">
+            {formatDate(room.createdAt)} ({timeAgo(room.createdAt)})
+          </span>
+        )}
+      </div>
+      <span className={`relative z-10 shrink-0 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
+        {isMatched
+          ? (isGuest
+              ? "Watch →"
+              : <WordRotate className="text-sm font-bold text-amber dark:text-amber" words={["Go", "Roll →"]} />)
+          : "View →"
+        }
+      </span>
+    </>
+  );
+
+  return (
+    <li className="flex flex-col gap-1.5">
+      {isMatched ? (
+        <div className="relative overflow-hidden rounded-2xl p-[2px]">
+          <BorderBeam colorFrom={isGuest ? "#00C4B3" : "#FCFF52"} colorTo={isGuest ? "#FCFF52" : "#00C4B3"} duration={3} size={80} height={10} />
+          <BorderBeam colorFrom={isGuest ? "#FCFF52" : "#00C4B3"} colorTo={isGuest ? "#00C4B3" : "#FCFF52"} duration={3} size={80} height={10} reverse initialOffset={50} />
+          <Link href={`/game/${room.id}`} className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70">
+            {cardContent}
+          </Link>
+        </div>
+      ) : (
+        <Link href={`/join/${room.id}`} className="relative flex items-center justify-between overflow-hidden rounded-2xl border-2 border-zinc-700/40 bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70">
+          {cardContent}
+        </Link>
+      )}
+      {roomSecret && !isGuest && (
+        <button
+          type="button"
+          onClick={() => onCopy(room.id, roomSecret)}
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-1.5 text-[10px] font-mono text-white/30 transition-colors hover:text-white/60 active:opacity-70"
+        >
+          {copiedRoomId === room.id
+            ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Secret copied!</span></>
+            : <><Copy className="h-3 w-3" />Copy secret — use on other devices</>
+          }
+        </button>
+      )}
+    </li>
+  );
+}
+
+const SECTIONS = [
+  { id: "action",   label: "Your turn", dot: "bg-amber-400",  text: "text-amber-400/80", filter: (r: ActiveRoom) => r.state === ROOM_STATE.MATCHED && !r.role },
+  { id: "watching", label: "Watching",  dot: "bg-sky-400",    text: "text-sky-400/80",   filter: (r: ActiveRoom) => r.state === ROOM_STATE.MATCHED && r.role === "guest" },
+  { id: "open",     label: "Open",      dot: "bg-zinc-500",   text: "text-zinc-500",     filter: (r: ActiveRoom) => r.state !== ROOM_STATE.MATCHED },
+] as const;
+
+function RoomSections({
+  rooms,
+  copiedRoomId,
+  onCopy,
+}: {
+  rooms: ActiveRoom[];
+  copiedRoomId: string | null;
+  onCopy: (id: string, secret: string) => void;
+}) {
+  const activeSections = SECTIONS.map(s => ({ ...s, rooms: rooms.filter(s.filter) })).filter(s => s.rooms.length > 0);
+
+  return (
+    <div className="flex flex-col gap-5">
+      {activeSections.map(section => (
+        <div key={section.id} className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className={`h-1.5 w-1.5 rounded-full ${section.dot}`} />
+            <span className={`text-[10px] uppercase tracking-widest font-heading ${section.text}`}>{section.label}</span>
+            <div className="flex-1 h-px bg-white/5" />
+            <span className="text-[10px] text-white/20">{section.rooms.length}</span>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {section.rooms.map(room => (
+              <RoomCard key={room.id} room={room} copiedRoomId={copiedRoomId} onCopy={onCopy} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function RoomsPage() {
   const publicClient = usePublicClient();
   const { address, status } = useConnection();
@@ -88,11 +208,8 @@ export default function RoomsPage() {
   const [myRooms, setMyRooms] = useState<ActiveRoom[]>([]);
   const [myRoomsLoading, setMyRoomsLoading] = useState(true);
   const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
-  const [myPage, setMyPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const myTotalPages = Math.max(1, Math.ceil(myRooms.length / PAGE_SIZE));
-  const myPagedRooms = myRooms.slice((myPage - 1) * PAGE_SIZE, myPage * PAGE_SIZE);
 
   useEffect(() => {
     setLoading(true);
@@ -210,14 +327,7 @@ export default function RoomsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function goToMyPage(p: number) {
-    if (p < 1 || p > myTotalPages || p === myPage) return;
-    setMyPage(p);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
   const pageRange = buildPageRange(page, totalPages);
-  const myPageRange = buildPageRange(myPage, myTotalPages);
 
   return (
     <div className="flex flex-col gap-6 pb-32">
@@ -427,155 +537,16 @@ export default function RoomsPage() {
           )}
 
           {!myRoomsLoading && myRooms.length > 0 && (
-            <>
-              <ul className="flex flex-col gap-3">
-                {myPagedRooms.map((room) => {
-                  const isMatched = room.state === ROOM_STATE.MATCHED;
-                  const isGuest = room.role === "guest";
-                  const symbol = room.token ? getTokenSymbol(room.token) : null;
-
-                  // Contenido compartido entre matched y non-matched
-                  const cardContent = (
-                    <>
-                      {/* Watermark derecho — mitad visible */}
-                      {room.token && (
-                        <Image
-                          src={getTokenIcon(room.token)}
-                          alt=""
-                          width={90}
-                          height={90}
-                          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-70"
-                          aria-hidden
-                        />
-                      )}
-
-                      {/* Izquierda: jerarquía de texto */}
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-semibold tracking-wide text-white">
-                          Room #{room.id}
-                        </span>
-                        <span className={`text-xs font-medium ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
-                          {isMatched
-                            ? (isGuest ? "👁️ Host must reveal" : "⚡ Ready to reveal")
-                            : "⏳ Waiting for opponent"}
-                        </span>
-                        {room.token && room.stake != null && symbol && (
-                          <span className="text-xs mt-1 text-zinc-500 flex items-center gap-1.5 rounded-full py-1 font-bold backdrop-blur-sm">
-                            <Image
-                              src={getTokenIcon(room.token)}
-                              alt={symbol}
-                              width={18}
-                              height={18}
-                              className="rounded-full"
-                            />
-                            {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
-                          </span>
-                        )}
-                        {room.createdAt && (
-                          <span className="text-[11px] text-zinc-600 mt-0.5">
-                            {formatDate(room.createdAt)} ({timeAgo(room.createdAt)})
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Derecha: CTA */}
-                      <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
-                        {isMatched
-                          ? (isGuest
-                              ? "Watch →"
-                              : <WordRotate
-                                  className="text-sm font-bold text-amber dark:text-amber"
-                                  words={["Go", "Roll Dices ->"]}
-                                />)
-                          : "View →"
-                        }
-                      </span>
-                    </>
-                  );
-
-                  const roomSecret = loadSecret(room.id);
-
-                  function copySecret() {
-                    if (!roomSecret) return;
-                    navigator.clipboard.writeText(roomSecret).then(() => {
-                      setCopiedRoomId(room.id);
-                      setTimeout(() => setCopiedRoomId(null), 2000);
-                    });
-                  }
-
-                  return (
-                    <li key={room.id} className="flex flex-col gap-1.5">
-                      {isMatched ? (
-                        <div className="relative overflow-hidden rounded-2xl p-[2px]">
-                          <BorderBeam
-                            colorFrom={isGuest ? "#00C4B3" : "#FCFF52"}
-                            colorTo={isGuest ? "#FCFF52" : "#00C4B3"}
-                            duration={3} size={80} height={10}
-                          />
-                          <BorderBeam
-                            colorFrom={isGuest ? "#FCFF52" : "#00C4B3"}
-                            colorTo={isGuest ? "#00C4B3" : "#FCFF52"}
-                            duration={3} size={80} height={10} reverse initialOffset={50}
-                          />
-                          <Link
-                            href={`/game/${room.id}`}
-                            className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"
-                          >
-                            {cardContent}
-                          </Link>
-                        </div>
-                      ) : (
-                        <Link
-                          href={`/join/${room.id}`}
-                          className="relative flex items-center justify-between overflow-hidden rounded-2xl border-2 border-zinc-700/40 hover:border-zinc-500/60 bg-zinc-900/80 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"
-                        >
-                          {cardContent}
-                        </Link>
-                      )}
-
-                      {roomSecret && !isGuest && (
-                        <button
-                          type="button"
-                          onClick={copySecret}
-                          className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-1.5 text-[10px] font-mono text-white/30 transition-colors hover:text-white/60 active:opacity-70"
-                        >
-                          {copiedRoomId === room.id
-                            ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Secret copied!</span></>
-                            : <><Copy className="h-3 w-3" />Copy secret — use on other devices</>
-                          }
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {myTotalPages > 1 && (
-                <Pagination className="mt-2">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious onClick={() => goToMyPage(myPage - 1)} disabled={myPage === 1} />
-                    </PaginationItem>
-                    {myPageRange.map((item, idx) =>
-                      item === "ellipsis" ? (
-                        <PaginationItem key={`ellipsis-${idx}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      ) : (
-                        <PaginationItem key={item}>
-                          <PaginationLink isActive={item === myPage} onClick={() => goToMyPage(item)}>
-                            {item}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    )}
-                    <PaginationItem>
-                      <PaginationNext onClick={() => goToMyPage(myPage + 1)} disabled={myPage === myTotalPages} />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
-            </>
+            <RoomSections
+              rooms={myRooms}
+              copiedRoomId={copiedRoomId}
+              onCopy={(id, secret) => {
+                navigator.clipboard.writeText(secret).then(() => {
+                  setCopiedRoomId(id);
+                  setTimeout(() => setCopiedRoomId(null), 2000);
+                });
+              }}
+            />
           )}
 
           {address && (

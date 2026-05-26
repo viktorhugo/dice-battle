@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { parseUnits, decodeEventLog } from "viem";
+import { parseUnits, formatUnits, decodeEventLog } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
@@ -72,6 +72,14 @@ export default function CreateRoomPage() {
     query: { enabled: !!address },
   });
 
+  const { data: tokenBalance } = useReadContract({
+    address: tokenAddress,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address!],
+    query: { enabled: !!address, refetchInterval: 10_000 },
+  });
+
   function isAllowanceReady(allowance: bigint | undefined) {
     return stakeValid &&
       tokenDecimals != null &&
@@ -80,6 +88,14 @@ export default function CreateRoomPage() {
   }
 
   let allowanceReady = isAllowanceReady(currentAllowance);
+
+  const stakeWei = stakeValid && tokenDecimals != null ? parseUnits(stake, tokenDecimals) : 0n;
+  const hasInsufficientBalance =
+    tokenBalance != null && tokenDecimals != null && stakeWei > 0n && (tokenBalance as bigint) < stakeWei;
+  const balanceFormatted =
+    tokenBalance != null && tokenDecimals != null
+      ? formatUnits(tokenBalance as bigint, tokenDecimals)
+      : null;
 
   async function onCreate() {
     logger.log("[onCreate] Iniciando creación de sala");
@@ -109,6 +125,20 @@ export default function CreateRoomPage() {
     try {
       const tokenAddress = getTokenAddress(token);
       const stakeWei = parseUnits(stake, tokenDecimals);
+
+      // Guard: verify on-chain balance before spending any gas
+      const balance = (await publicClient.readContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      })) as bigint;
+      if (balance < stakeWei) {
+        setError(
+          `Insufficient ${token} — you have ${formatUnits(balance, tokenDecimals)} but need ${stake}`
+        );
+        return;
+      }
       logger.log("[onCreate] Token address:", tokenAddress);
       logger.log("[onCreate] Stake en wei:", stakeWei.toString());
 
@@ -305,7 +335,7 @@ export default function CreateRoomPage() {
       </section>
 
       {/* Summary card */}
-      <section className={`relative overflow-hidden rounded-2xl border bg-zinc-900/80 backdrop-blur-md p-4 ${cardBorder}`}>
+      <section className={`relative overflow-hidden rounded-2xl border-2 bg-zinc-900/80 backdrop-blur-md p-4 ${cardBorder}`}>
         {/* Token watermark */}
         <Image
           src={tokenIcon}
@@ -313,9 +343,20 @@ export default function CreateRoomPage() {
           width={100}
           height={100}
           aria-hidden
-          className="pointer-events-none absolute -right-[45px] top-1/2 -translate-y-1/2 select-none opacity-30"
+          className="pointer-events-none absolute -left-[30px] top-[64%] select-none opacity-30"
         />
         <div className="relative flex flex-col gap-2 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-zinc-500">Your balance</span>
+            <span className={`font-mono text-sm font-semibold ${hasInsufficientBalance ? "text-red-400" : "text-zinc-300"}`}>
+              {balanceFormatted != null
+                ? `${parseFloat(balanceFormatted).toFixed(2)} ${token}`
+                : <span className="text-zinc-600">…</span>
+              }
+              {hasInsufficientBalance && <span className="ml-1.5 text-[10px]">⚠ insufficient</span>}
+            </span>
+          </div>
+          <div className="border-t border-zinc-800/60" />
           <div className="flex justify-between">
             <span className="text-zinc-500">Your stake</span>
             <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
@@ -325,12 +366,12 @@ export default function CreateRoomPage() {
             <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
           </div>
           <div className="mt-1 flex justify-between border-t border-zinc-800 pt-2.5 font-semibold">
-            <span className="text-zinc-400">If you win</span>
-            <span className="font-mono text-green-400">
+            <span className="text-zinc-400 ml-16">If you win</span>
+            <span className="font-mono text-green-400 ">
               ~{stakeValid ? (Number(stake) * 1.96).toFixed(2) : "0.00"} {token}
             </span>
           </div>
-          <p className="text-[10px] text-zinc-600">Protocol fee: 2% of pot</p>
+          <p className="text-[10px] text-zinc-600 ml-16">Protocol fee: 2% of pot</p>
         </div>
       </section>
 
@@ -353,28 +394,36 @@ export default function CreateRoomPage() {
       </div>
 
       {/* CTA */}
-      <button
-        type="button"
-        disabled={!isConnected || busy || tokenDecimals == null}
-        onClick={onCreate}
-        className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
-        style={{ background: "#FCFF52" }}
-      >
-        <span
-          aria-hidden
-          className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10"
-        />
-        <span className="relative z-10 flex items-center gap-2">
-          {step === "approving" && <><Spinner /> Approving…</>}
-          {step === "creating" && <><Spinner /> Creating room…</>}
-          {step === "done" && <>Room created! <CheckCheck /></>}
-          {step === "idle" && (
-            !isConnected ? "Connect wallet"
-            : tokenDecimals == null ? "Loading…"
-            : <><Rocket className="h-5 w-5" /> Create and stake</>
-          )}
-        </span>
-      </button>
+      {(() => {
+        const isDisabled = !isConnected || busy || tokenDecimals == null || hasInsufficientBalance;
+        const showNeutral = hasInsufficientBalance && step === "idle";
+        return (
+          <button
+            type="button"
+            disabled={isDisabled}
+            onClick={onCreate}
+            className={`group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none ${
+              showNeutral
+                ? "border border-red-500/30 bg-red-500/10 text-red-400"
+                : "text-[#0C0C0C] disabled:opacity-40 animate-btn-glow"
+            }`}
+            style={showNeutral ? undefined : { background: "#FCFF52" }}
+          >
+            <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
+            <span className="relative z-10 flex items-center gap-2">
+              {step === "approving" && <><Spinner /> Approving…</>}
+              {step === "creating" && <><Spinner /> Creating room…</>}
+              {step === "done" && <>Room created! <CheckCheck /></>}
+              {step === "idle" && (
+                !isConnected ? "Connect wallet"
+                : tokenDecimals == null ? "Loading…"
+                : hasInsufficientBalance ? `Insufficient ${token} — top up to continue`
+                : <><Rocket className="h-5 w-5" /> Create and stake</>
+              )}
+            </span>
+          </button>
+        );
+      })()}
     </div>
   );
 }
