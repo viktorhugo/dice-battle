@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Hex } from "viem";
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const AUTO_DISMISS_SECS = 10;
 const shownKey = (roomId: string) => `dice-battle:secret-backup-shown:${roomId}`;
 
 export function hasSeenBackup(roomId: string): boolean {
@@ -30,74 +29,85 @@ interface Props {
 
 export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
   const [copied, setCopied] = useState(false);
-  const [secs, setSecs] = useState(AUTO_DISMISS_SECS);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(shownKey(roomId), "1");
-    } catch {
-      // ignore (Safari private mode, etc.)
-    }
-  }, [roomId]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSecs((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (secs === 0) onDismiss();
-  }, [secs, onDismiss]);
+  const [confirmed, setConfirmed] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(secret);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // WebView blocked clipboard access — secret is visible for long-press copy
+      // WebView blocked clipboard — secret visible for long-press copy
     }
   }
 
+  function handleDismiss() {
+    try {
+      window.localStorage.setItem(shownKey(roomId), "1");
+    } catch {
+      // ignore
+    }
+    onDismiss();
+  }
+
+  const canDismiss = copied && confirmed;
+
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <DialogContent showCloseButton={false} className="flex flex-col gap-4 bg-[#1a1a1a] border-gray-500/40" >
+    <Dialog open onOpenChange={() => { /* blocked — must confirm first */ }}>
+      <DialogContent showCloseButton={false} className="flex flex-col gap-4 bg-[#1a1a1a] border-orange-500/30">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base font-semibold text-white/80">Save your secret</DialogTitle>
-            <span className="text-xs text-white/30">{secs}s</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <DialogTitle className="text-base font-semibold text-orange-400">
+              Save your secret — required to reveal
+            </DialogTitle>
           </div>
-          <DialogDescription>
-            Save this in case you lose access. Without it you can&apos;t reveal.
+          <DialogDescription className="text-white/50 text-xs leading-relaxed">
+            This secret is stored <span className="text-white/70 font-medium">only on this device</span>. If you lose it, you <span className="text-orange-400 font-medium">cannot reveal</span> and your stake will be claimable by your opponent.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Secret box */}
         <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <p className="break-all font-mono text-[11px] leading-relaxed text-white/80">
+          <p className="break-all font-mono text-[11px] leading-relaxed text-white/70 select-all">
             {secret}
           </p>
         </div>
 
+        {/* Copy button */}
         <button
           type="button"
           onClick={handleCopy}
-          className={`rounded-xl border py-2.5 text-sm font-medium transition-colors active:opacity-70 ${
+          className={`rounded-xl border py-3 text-sm font-semibold transition-colors active:opacity-70 ${
             copied
               ? "border-green-500/40 bg-green-500/10 text-green-400"
-              : "border-white/15 text-white"
+              : "border-[#FCFF52]/40 bg-[#FCFF52]/10 text-[#FCFF52]"
           }`}
         >
-          {copied ? "✓ Copied!" : "Copy secret"}
+          {copied ? "✓ Copied to clipboard" : "Copy secret"}
         </button>
 
+        {/* Confirmation checkbox */}
+        <label className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors ${confirmed ? "border-green-500/30 bg-green-500/5" : "border-white/10 bg-white/5"}`}>
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-green-400"
+          />
+          <span className="text-xs leading-relaxed text-white/60">
+            I have saved my secret in a safe place. I understand that without it I cannot reveal and may lose my stake.
+          </span>
+        </label>
+
+        {/* Dismiss — only enabled after copy + confirm */}
         <button
           type="button"
-          onClick={onDismiss}
-          className="text-center text-xs text-white/30 active:text-white/60"
+          disabled={!canDismiss}
+          onClick={handleDismiss}
+          className="rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-30 disabled:pointer-events-none"
+          style={{ background: canDismiss ? "#FCFF52" : undefined, color: canDismiss ? "#0C0C0C" : undefined, border: canDismiss ? undefined : "1px solid rgba(255,255,255,0.1)" }}
         >
-          Dismiss ({secs}s)
+          {canDismiss ? "Got it — start the game" : "Copy and confirm above to continue"}
         </button>
       </DialogContent>
     </Dialog>

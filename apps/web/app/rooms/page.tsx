@@ -20,9 +20,9 @@ import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { getTokenDecimals, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
 import Image from "next/image";
-import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, type IndexerRoom } from "@/lib/indexer";
-import { clearSecret } from "@/lib/commitment";
-import { Zap } from "lucide-react";
+import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, getMatchedRoomsAsGuest, type IndexerRoom } from "@/lib/indexer";
+import { clearSecret, loadSecret } from "@/lib/commitment";
+import { Zap, Copy, Check } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { logger } from "@/lib/logger";
 import { ComicText } from '../../components/ui/comic-text';
@@ -34,6 +34,7 @@ const SECRET_PREFIX = "dice-battle:secret:";
 type ActiveRoom = {
   id: string;
   state: typeof ROOM_STATE.OPEN | typeof ROOM_STATE.MATCHED;
+  role?: "guest";
   token?: string;
   stake?: bigint;
   createdAt?: number;
@@ -86,6 +87,7 @@ export default function RoomsPage() {
 
   const [myRooms, setMyRooms] = useState<ActiveRoom[]>([]);
   const [myRoomsLoading, setMyRoomsLoading] = useState(true);
+  const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
   const [myPage, setMyPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -150,7 +152,11 @@ export default function RoomsPage() {
       ? getActiveRoomsByPlayer(address).catch(() => [])
       : Promise.resolve([]);
 
-    Promise.all([fromLocalStorage, fromIndexer]).then(async ([localResults, indexerRooms]) => {
+    const fromGuest = address
+      ? getMatchedRoomsAsGuest(address).catch(() => [])
+      : Promise.resolve([]);
+
+    Promise.all([fromLocalStorage, fromIndexer, fromGuest]).then(async ([localResults, indexerRooms, guestRooms]) => {
       const localActive = localResults.filter((r): r is ActiveRoom => r !== null);
 
       // Merge: indexer rooms that aren't already in localStorage list
@@ -166,7 +172,20 @@ export default function RoomsPage() {
           createdAt: Number(r.createdAt),
         }));
 
-      const merged = [...localActive, ...indexerActive];
+      // Guest rooms: salas donde el usuario es Player B y están en MATCHED
+      const allHostIds = new Set([...localIds, ...indexerActive.map((r) => r.id)]);
+      const guestActive: ActiveRoom[] = guestRooms
+        .filter((r) => !allHostIds.has(r.id))
+        .map((r) => ({
+          id: r.id,
+          state: ROOM_STATE.MATCHED as 2,
+          role: "guest" as const,
+          token: r.token,
+          stake: BigInt(r.stake),
+          createdAt: Number(r.createdAt),
+        }));
+
+      const merged = [...localActive, ...indexerActive, ...guestActive];
 
       try {
         // Fill missing createdAt for localStorage rooms
@@ -412,6 +431,7 @@ export default function RoomsPage() {
               <ul className="flex flex-col gap-3">
                 {myPagedRooms.map((room) => {
                   const isMatched = room.state === ROOM_STATE.MATCHED;
+                  const isGuest = room.role === "guest";
                   const symbol = room.token ? getTokenSymbol(room.token) : null;
 
                   // Contenido compartido entre matched y non-matched
@@ -434,8 +454,10 @@ export default function RoomsPage() {
                         <span className="text-sm font-semibold tracking-wide text-white">
                           Room #{room.id}
                         </span>
-                        <span className={`text-xs font-medium ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
-                          {isMatched ? "⚡ Ready to reveal" : "⏳ Waiting for opponent"}
+                        <span className={`text-xs font-medium ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
+                          {isMatched
+                            ? (isGuest ? "👁️ Host must reveal" : "⚡ Ready to reveal")
+                            : "⏳ Waiting for opponent"}
                         </span>
                         {room.token && room.stake != null && symbol && (
                           <span className="text-xs mt-1 text-zinc-500 flex items-center gap-1.5 rounded-full py-1 font-bold backdrop-blur-sm">
@@ -457,28 +479,44 @@ export default function RoomsPage() {
                       </div>
 
                       {/* Derecha: CTA */}
-                      <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? "text-amber-400" : "text-zinc-400"}`}>
-                        { 
-                          isMatched 
-                            ? <>
-                              <WordRotate
+                      <span className={`relative z-10 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
+                        {isMatched
+                          ? (isGuest
+                              ? "Watch →"
+                              : <WordRotate
                                   className="text-sm font-bold text-amber dark:text-amber"
                                   words={["Go", "Roll Dices ->"]}
-                                />
-                              </>
-                            : "View →"
+                                />)
+                          : "View →"
                         }
                       </span>
                     </>
                   );
 
+                  const roomSecret = loadSecret(room.id);
+
+                  function copySecret() {
+                    if (!roomSecret) return;
+                    navigator.clipboard.writeText(roomSecret).then(() => {
+                      setCopiedRoomId(room.id);
+                      setTimeout(() => setCopiedRoomId(null), 2000);
+                    });
+                  }
+
                   return (
-                    <li key={room.id}>
+                    <li key={room.id} className="flex flex-col gap-1.5">
                       {isMatched ? (
-                        /* Wrapper con gap de 2px — los BorderBeam son visibles en esa franja */
                         <div className="relative overflow-hidden rounded-2xl p-[2px]">
-                          <BorderBeam colorFrom="#FCFF52" colorTo="#00C4B3" duration={3} size={80} height={10} />
-                          <BorderBeam colorFrom="#00C4B3" colorTo="#FCFF52" duration={3} size={80} height={10} reverse initialOffset={50} />
+                          <BorderBeam
+                            colorFrom={isGuest ? "#00C4B3" : "#FCFF52"}
+                            colorTo={isGuest ? "#FCFF52" : "#00C4B3"}
+                            duration={3} size={80} height={10}
+                          />
+                          <BorderBeam
+                            colorFrom={isGuest ? "#FCFF52" : "#00C4B3"}
+                            colorTo={isGuest ? "#00C4B3" : "#FCFF52"}
+                            duration={3} size={80} height={10} reverse initialOffset={50}
+                          />
                           <Link
                             href={`/game/${room.id}`}
                             className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70"
@@ -493,6 +531,19 @@ export default function RoomsPage() {
                         >
                           {cardContent}
                         </Link>
+                      )}
+
+                      {roomSecret && !isGuest && (
+                        <button
+                          type="button"
+                          onClick={copySecret}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-1.5 text-[10px] font-mono text-white/30 transition-colors hover:text-white/60 active:opacity-70"
+                        >
+                          {copiedRoomId === room.id
+                            ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Secret copied!</span></>
+                            : <><Copy className="h-3 w-3" />Copy secret — use on other devices</>
+                          }
+                        </button>
                       )}
                     </li>
                   );

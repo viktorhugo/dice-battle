@@ -25,6 +25,7 @@ import { CircleSlash } from "lucide-react";
 import { FloatingToast } from "@/components/ui/floating-toast";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
 import { loadSecret } from "@/lib/commitment";
+import { storeJoinedRoom } from "@/lib/joinedRooms";
 
 type Room = {
   playerA: `0x${string}`;
@@ -265,6 +266,7 @@ export default function JoinRoomPage() {
         attempts++;
       }
       logger.log("[onJoin] Estado confirmado:", fresh?.state, "— redirigiendo a /game/" + params.roomId);
+      storeJoinedRoom(params.roomId);
       router.push(`/game/${params.roomId}`);
     } catch (e) {
       logger.error("[onJoin] Error:", e instanceof Error ? e.message : String(e));

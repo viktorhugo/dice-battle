@@ -509,6 +509,35 @@ export async function getActiveRoomsByPlayer(address: string): Promise<ActiveInd
   return data.Room;
 }
 
+const GUEST_MATCHED_ROOMS_QUERY = gql`
+  query GuestMatchedRooms($address: String!) {
+    Room(
+      where: {
+        _and: [
+          { playerB: { _eq: $address } }
+          { state: { _eq: "MATCHED" } }
+        ]
+      }
+      order_by: { createdAt: desc }
+      limit: 50
+    ) {
+      id
+      state
+      token
+      stake
+      createdAt
+    }
+  }
+`;
+
+export async function getMatchedRoomsAsGuest(address: string): Promise<ActiveIndexerRoom[]> {
+  const data = await indexer.request<{ Room: ActiveIndexerRoom[] }>(
+    GUEST_MATCHED_ROOMS_QUERY,
+    { address: address.toLowerCase() }
+  );
+  return data.Room;
+}
+
 export type H2HSummary = { myWins: number; theirWins: number; ties: number };
 
 export async function getHeadToHead(

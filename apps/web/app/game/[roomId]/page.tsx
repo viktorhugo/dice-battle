@@ -9,7 +9,7 @@ import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
-import { loadSecret, clearSecret } from "@/lib/commitment";
+import { loadSecret, clearSecret, storeSecret } from "@/lib/commitment";
 import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, SHOW_BLOCK_COUNTDOWN } from "@/lib/constants";
 import {
   getPlayerMiniStats,
@@ -62,6 +62,7 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
+  const [manualSecret, setManualSecret] = useState("");
   const [error, setError] = useErrorToast();
   const fireFireworks = useFireworks();
   const fallAshes = useAshes();
@@ -342,11 +343,6 @@ export default function GamePage() {
           <div className="flex flex-col items-center gap-2">
             <DicePair roll1={result?.rollA1} roll2={result?.rollA2} label="HOST" delay={0} />
             <span className="font-mono text-[9px] text-white/35">{truncateAddress(room.playerA)}</span>
-            {isPlayerA && (
-              <span className="rounded-full border border-[#FCFF52]/30 bg-[#FCFF52]/10 px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide" style={{ color: "#FCFF52" }}>
-                YOU
-              </span>
-            )}
             {hostStats && (() => {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;
               const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
@@ -360,6 +356,9 @@ export default function GamePage() {
                 </span>
               );
             })()}
+            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerA ? "border border-[#FCFF52]/30 bg-[#FCFF52]/10" : "invisible"}`} style={{ color: "#FCFF52" }}>
+              YOU
+            </span>
           </div>
 
           <span className="font-heading text-lg font-bold text-white/20 mb-6">VS</span>
@@ -371,11 +370,6 @@ export default function GamePage() {
               ? <span className="font-mono text-[9px] text-white/35">{truncateAddress(room.playerB)}</span>
               : <span className="font-mono text-[9px] text-white/20">waiting…</span>
             }
-            {isPlayerB && (
-              <span className="rounded-full border border-[#00C4B3]/30 bg-[#00C4B3]/10 px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide" style={{ color: "#00C4B3" }}>
-                YOU
-              </span>
-            )}
             {guestStats && (() => {
               const total = guestStats.wins + guestStats.losses + guestStats.ties;
               const wr = total > 0 ? Math.round((guestStats.wins / total) * 100) : 0;
@@ -389,6 +383,9 @@ export default function GamePage() {
                 </span>
               );
             })()}
+            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerB ? "border border-[#00C4B3]/30 bg-[#00C4B3]/10" : "invisible"}`} style={{ color: "#00C4B3" }}>
+              YOU
+            </span>
           </div>
         </div>
       </section>
@@ -495,7 +492,7 @@ export default function GamePage() {
       {/* Actions while Matched */}
       {room.state === ROOM_STATE.MATCHED && (
         <section className="flex flex-col gap-3">
-          {isPlayerA && (
+          {isPlayerA && hasSecret && (
             <>
               <button
                 type="button"
@@ -521,6 +518,46 @@ export default function GamePage() {
                 </p>
               )}
             </>
+          )}
+
+          {isPlayerA && !hasSecret && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/8 p-4 backdrop-blur-sm">
+              <div className="flex flex-col gap-1">
+                <p className="font-heading text-sm font-semibold text-orange-400">
+                  Secret not found on this device
+                </p>
+                <p className="text-xs leading-relaxed text-orange-400/60">
+                  Your room was created on another device. Open that device, go to{" "}
+                  <span className="font-mono">My Rooms → Room #{params.roomId}</span> and copy your secret. Then paste it here.
+                </p>
+              </div>
+
+              <input
+                type="text"
+                spellCheck={false}
+                placeholder="Paste your secret (0x…64 hex chars)"
+                value={manualSecret}
+                onChange={(e) => setManualSecret(e.target.value.trim())}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/40 transition-colors"
+              />
+
+              <button
+                type="button"
+                disabled={!/^0x[0-9a-fA-F]{64}$/.test(manualSecret) || busy}
+                onClick={() => {
+                  storeSecret(params.roomId, manualSecret as Hex);
+                  void onReveal();
+                }}
+                className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
+                style={{ background: "#FCFF52" }}
+              >
+                <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
+                <span className="relative z-10 flex items-center gap-2">
+                  {busy ? <Spinner className="h-4 w-4" /> : <Dices className="h-5 w-5" />}
+                  {busy ? "Rolling…" : "Reveal and roll"}
+                </span>
+              </button>
+            </div>
           )}
 
           {isPlayerB && (!canClaim || !SHOW_BLOCK_COUNTDOWN) && (
