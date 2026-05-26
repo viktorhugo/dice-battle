@@ -29,7 +29,8 @@ import { useTieClash } from "@/hooks/useTieClash";
 import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { logger } from "@/lib/logger";
 
-const REVEAL_WINDOW = 200n;
+const CELO_SECS_PER_BLOCK = 5;
+const REVEAL_WINDOW_BLOCKS = 17_280n; // 24 h on Celo Mainnet (5 s/block)
 
 type Room = {
   playerA: `0x${string}`;
@@ -212,10 +213,18 @@ export default function GamePage() {
   const isPlayerB = address && room && address.toLowerCase() === room.playerB.toLowerCase();
 
   // How many blocks until the claim window opens (negative = already expired)
-  const blocksUntilExpiry = room
-    ? Number(room.matchedAtBlock + REVEAL_WINDOW - currentBlock)
+  const blocksUntilExpiry = room && currentBlock > 0n
+    ? Number(room.matchedAtBlock + REVEAL_WINDOW_BLOCKS - currentBlock)
     : null;
   const canClaim = blocksUntilExpiry !== null && blocksUntilExpiry <= 0;
+
+  // Human-readable time remaining for Player B
+  const secsUntilClaim = blocksUntilExpiry !== null ? Math.max(0, blocksUntilExpiry * CELO_SECS_PER_BLOCK) : null;
+  const revealTimeLabel = secsUntilClaim !== null && secsUntilClaim > 0
+    ? secsUntilClaim >= 3600
+      ? `~${Math.floor(secsUntilClaim / 3600)}h ${Math.floor((secsUntilClaim % 3600) / 60)}m`
+      : `~${Math.max(1, Math.floor(secsUntilClaim / 60))}m`
+    : null;
 
   async function onReveal() {
     if (!room || !publicClient) return;
@@ -507,14 +516,14 @@ export default function GamePage() {
                   {busy ? "Rolling…" : "Reveal and roll"}
                 </span>
               </button>
-              {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
-                <p className={`text-center text-xs font-mono ${blocksUntilExpiry < 100 ? "text-orange-400/70" : "text-white/25"}`}>
-                  ~{blocksUntilExpiry} blocks to reveal (~{Math.ceil(blocksUntilExpiry * 5 / 60)} min)
+              {canClaim && (
+                <p className="text-center text-xs text-red-400/80 font-mono">
+                  Claim window open — reveal now or opponent can claim your stake
                 </p>
               )}
-              {SHOW_BLOCK_COUNTDOWN && canClaim && (
-                <p className="text-center text-xs text-red-400/80 font-mono">
-                  Time is up — reveal immediately or lose your stake
+              {!canClaim && revealTimeLabel && (
+                <p className={`text-center text-xs font-mono ${blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? "text-orange-400/70" : "text-white/25"}`}>
+                  {blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? `⚠️ Only ${revealTimeLabel} left to reveal` : `${revealTimeLabel} left to reveal`}
                 </p>
               )}
             </>
@@ -541,44 +550,53 @@ export default function GamePage() {
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/40 transition-colors"
               />
 
-              <button
-                type="button"
-                disabled={!/^0x[0-9a-fA-F]{64}$/.test(manualSecret) || busy}
-                onClick={() => {
-                  storeSecret(params.roomId, manualSecret as Hex);
-                  void onReveal();
-                }}
-                className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
-                style={{ background: "#FCFF52" }}
-              >
-                <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
-                <span className="relative z-10 flex items-center gap-2">
-                  {busy ? <Spinner className="h-4 w-4" /> : <Dices className="h-5 w-5" />}
-                  {busy ? "Rolling…" : "Reveal and roll"}
-                </span>
-              </button>
+              {(() => {
+                const isValid = /^0x[0-9a-fA-F]{64}$/.test(manualSecret);
+                return (
+                  <button
+                    type="button"
+                    disabled={!isValid || busy}
+                    onClick={() => {
+                      storeSecret(params.roomId, manualSecret as Hex);
+                      void onReveal();
+                    }}
+                    className={`group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none ${
+                      isValid
+                        ? "text-[#0C0C0C] animate-btn-glow"
+                        : "border border-white/10 bg-white/5 text-white/25"
+                    }`}
+                    style={isValid ? { background: "#FCFF52" } : undefined}
+                  >
+                    <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
+                    <span className="relative z-10 flex items-center gap-2">
+                      {busy ? <Spinner className="h-4 w-4" /> : <Dices className="h-5 w-5" />}
+                      {busy ? "Rolling…" : isValid ? "Reveal and roll" : "Paste your secret above"}
+                    </span>
+                  </button>
+                );
+              })()}
             </div>
           )}
 
-          {isPlayerB && (!canClaim || !SHOW_BLOCK_COUNTDOWN) && (
+          {isPlayerB && !canClaim && (
             <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm">
               <SoftBlurText text="Waiting for host to reveal…" className="text-sm text-white/50" loop />
-              {SHOW_BLOCK_COUNTDOWN && blocksUntilExpiry !== null && blocksUntilExpiry > 0 && (
+              {revealTimeLabel && (
                 <p className="text-[10px] font-mono text-white/25">
-                  Claim window in ~{blocksUntilExpiry} blocks
+                  Host has {revealTimeLabel} left — then you can claim
                 </p>
               )}
             </div>
           )}
 
-          {SHOW_BLOCK_COUNTDOWN && isPlayerB && canClaim && (
+          {isPlayerB && canClaim && (
             <button
               type="button"
               disabled={busy}
               onClick={onClaimExpired}
-              className="rounded-2xl border border-red-500/30 bg-red-500/10 py-4 text-sm font-semibold text-red-400 active:opacity-70 disabled:opacity-40 transition-opacity"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 py-4 text-sm font-semibold text-red-400 active:opacity-70 disabled:opacity-40 transition-opacity"
             >
-              {busy ? "Claiming…" : "Claim expired — host didn't reveal"}
+              {busy ? <><Spinner className="h-4 w-4" />Claiming…</> : "Claim — host didn't reveal in time"}
             </button>
           )}
         </section>
