@@ -76,6 +76,85 @@ export const CHAIN_ID = NETWORK === "celo" ? 42_220 : 11_142_220;
 // Set to true to show block/minute countdown timers in the game UI.
 export const SHOW_BLOCK_COUNTDOWN = false;
 
+export const TOURNAMENT_ABI = [
+  // ── Nickname registry ──────────────────────────────────────
+  {
+    name: "setNickname",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "name", type: "string" }],
+    outputs: [],
+  },
+  {
+    name: "getNickname",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "player", type: "address" }],
+    outputs: [{ type: "string" }],
+  },
+  {
+    name: "NicknameSet",
+    type: "event",
+    inputs: [
+      { name: "player", type: "address", indexed: true },
+      { name: "nickname", type: "string", indexed: false },
+    ],
+  },
+  // ── Tournament core ────────────────────────────────────────
+  {
+    name: "currentDayId",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "dayInfo",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "dayId", type: "uint256" }],
+    outputs: [
+      { name: "pool",      type: "uint128" },
+      { name: "finalized", type: "bool" },
+      { name: "top",       type: "address[3]" },
+      { name: "wins",      type: "uint32[3]" },
+      { name: "prizes",    type: "uint256[3]" },
+      { name: "claimed",   type: "bool[3]" },
+    ],
+  },
+  {
+    name: "claim",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "dayId", type: "uint256" },
+      { name: "rank",  type: "uint8" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "fundDay",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "dayId",  type: "uint256" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "setTopWinners",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "dayId",     type: "uint256" },
+      { name: "top",       type: "address[3]" },
+      { name: "winCounts", type: "uint32[3]" },
+    ],
+    outputs: [],
+  },
+] as const;
+
 // Minimal ERC20 ABI for approve/allowance/balanceOf
 export const ERC20_ABI = [
   {

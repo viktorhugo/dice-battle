@@ -17,8 +17,9 @@ import {
   type PlayerMiniStats,
   type H2HSummary,
 } from "@/lib/indexer";
-import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo } from "@/lib/utils";
+import { getTokenSymbol, getTokenIcon, timeAgo } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
+import { useDisplayName } from "@/hooks/useDisplayName";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
 import { CircleSlash } from "lucide-react";
@@ -51,6 +52,7 @@ export default function JoinRoomPage() {
   const [showBackup, setShowBackup] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const hostDisplayName = useDisplayName(room?.playerA);
   const [hostStats, setHostStats] = useState<PlayerMiniStats | null>(null);
   const [createdAt, setCreatedAt] = useState<number | null>(null);
   const [h2h, setH2H] = useState<H2HSummary | null>(null);
@@ -380,7 +382,7 @@ export default function JoinRoomPage() {
           <div className="flex flex-col gap-0.5">
             <span className="text-[11px] uppercase tracking-wider text-zinc-600">Host</span>
             <p className="text-sm">
-              <span className="font-mono text-zinc-300">{truncateAddress(room.playerA)}</span>
+              <span className="font-mono text-zinc-300">{hostDisplayName}</span>
             </p>
             {hostStats && (() => {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;

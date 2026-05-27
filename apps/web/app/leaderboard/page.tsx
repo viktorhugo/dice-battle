@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { WalletBar } from "@/components/WalletBar";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { truncateAddress } from "@/lib/utils";
+import { useDisplayName } from "@/hooks/useDisplayName";
 import {
   getLeaderboardAllTime,
   getLeaderboardPeriod,
@@ -74,6 +74,7 @@ function LeaderboardRow({
   rank: number;
   sort: SortKey;
 }) {
+  const displayName = useDisplayName(entry.address);
   const medal = MEDAL[rank];
   const highlight =
     rank === 0
@@ -97,7 +98,7 @@ function LeaderboardRow({
         <Identicon address={entry.address} size={28} />
 
         <span className="flex-1 font-mono text-xs text-white">
-          {truncateAddress(entry.address)}
+          {displayName}
         </span>
 
         <span className="text-sm font-semibold text-white">

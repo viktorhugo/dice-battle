@@ -1,7 +1,7 @@
 
 # Dice Battle — Task Board
 
-> Última actualización: 2026-05-25
+> Última actualización: 2026-05-27
 
 ---
 
@@ -20,14 +20,8 @@
 
 ## 🔴 Crítico — bloqueante para producción
 
-- [ ] **Confirmar dirección DiceBattle mainnet** — verificar si es `0xe40245B53Fc2c471CD9b50E8662f3A2aD63e88EF` en CeloScan
-- [ ] **Descomentar y corregir `packages/envio-indexer/config.yaml`** — activar bloque `id: 42220` con dirección y start_block correctos
-- [ ] **Reiniciar indexer Envio apuntando a mainnet** — sin esto leaderboard, stats y rooms no cargan en prod
-- [ ] **Completar variables de entorno producción en Vercel**
-  - `NEXT_PUBLIC_GAME_ADDRESS` = dirección mainnet confirmada
-  - `NEXT_PUBLIC_NETWORK` = `celo`
-  - `NEXT_PUBLIC_INDEXER_URL` = URL Envio hosted
-  - `NEXT_PUBLIC_GAME_DEPLOY_BLOCK` = block real mainnet
+- ✅ **Indexer Envio mainnet activado** — `config.yaml` bloque `id: 42220` configurado y corriendo
+- ✅ **Variables de entorno producción en Vercel** — `GAME_ADDRESS`, `NETWORK=celo`, `INDEXER_URL`, `GAME_DEPLOY_BLOCK` seteados
 
 ---
 
@@ -305,7 +299,7 @@ Cada wallet puede registrar un apodo visible en todo el app. La prioridad de dis
 
 - [ ] **`components/NicknameEditModal.tsx`** — modal con input inline
 
-  ```
+  ```text
   ┌─────────────────────────────┐
   │  Tu apodo                   │
   │  ┌───────────────────────┐  │
@@ -323,7 +317,7 @@ Cada wallet puede registrar un apodo visible en todo el app. La prioridad de dis
 
 - [ ] **`app/profile/[address]/page.tsx`** — botón editar solo si es tu propio perfil
 
-  ```
+  ```text
   [  CryptoBeast  ✏️  ]   ← nickname o dirección truncada
   ```
 
@@ -376,6 +370,35 @@ Cada wallet puede registrar un apodo visible en todo el app. La prioridad de dis
 
 ## ✅ Completado (Mayo 2026)
 
+### 27 Mayo
+
+- ✅ **Nickname registry en `DailyTournament.sol`** — `setNickname` / `getNickname` / `NicknameSet` integrados al contrato existente (sin deploy adicional)
+- ✅ **Tests nickname** — 7 casos en `DailyTournament.t.sol`; 40/40 pasando incluyendo fuzz
+- ✅ **`TOURNAMENT_ABI`** — ABI completo (nickname + tournament) en `lib/constants.ts`
+- ✅ **`lib/ens.ts`** — Resolución Celoname (.celo) → ENS Ideas API (.eth), caché sessionStorage
+- ✅ **`hooks/useNickname`** — `useReadContract` sobre `DailyTournament.getNickname`
+- ✅ **`hooks/useSetNickname`** — write + `waitForTransactionReceipt`
+- ✅ **`hooks/useDisplayName`** — prioridad: Nickname → Celoname/ENS → truncatedAddress
+- ✅ **`NicknameEditModal`** — input con contador `/20`, validación, loading, toast éxito
+- ✅ **Nickname en `/profile`** — nombre en negrita, botón ✏️ solo en perfil propio, dirección queda subtle debajo
+- ✅ **`useDisplayName` wired** — WalletBar, `/game`, `/join`, `/leaderboard`
+
+### 26 Mayo
+
+- ✅ **My Rooms — secciones** — reorganizado en "Your turn" / "Watching" / "Open" con headers de color y dot indicator
+- ✅ **My Rooms — Player B recovery** — `getMatchedRoomsAsGuest` + `joinedRooms.ts` + `storeJoinedRoom` en join page; Player B ve sus salas MATCHED aunque no tenga el secret
+- ✅ **My Rooms — Copy secret** — botón para copiar el secreto desde My Rooms y usarlo en otro dispositivo
+- ✅ **SecretBackupModal** — requiere Copy + checkbox de confirmación antes de poder cerrar; sin auto-dismiss
+- ✅ `/game` — **Secret import UI** — cuando el host no tiene el secret en el dispositivo puede pegarlo (0x…64 hex) y revelar
+- ✅ `/game` — **Claim expired** — botón para Player B visible siempre que `canClaim = true`; sin gate `SHOW_BLOCK_COUNTDOWN`
+- ✅ `/game` — **Countdown legible** — tiempo restante en h/min (no bloques); `REVEAL_WINDOW_BLOCKS` leído directo del contrato con fallback 17 280 bloques (24 h)
+- ✅ `/game` — **YOU badge alignment** — columnas de igual altura con `invisible` placeholder; dados alineados
+- ✅ `/game` — botón "Paste secret" neutral cuando está disabled (sin color oliva)
+- ✅ `/create` — **Balance validation** — `balanceOf` en tiempo real + guard on-chain antes del approve; botón rojo si fondos insuficientes
+- ✅ `DiceBattle.sol` — `REVEAL_WINDOW_BLOCKS` cambiado a `17_280` (24 h en Celo Mainnet)
+
+### 25 Mayo
+
 - ✅ `/stats` — TVL on-chain en vivo, balances por token, stats indexer, actividad reciente
 - ✅ LiveStats — "Played today" corregido (filtra RESOLVED/TIED) + link a leaderboard hoy
 - ✅ Leaderboard — URL param `?period=today` para pre-seleccionar tab
@@ -388,3 +411,4 @@ Cada wallet puede registrar un apodo visible en todo el app. La prioridad de dis
 - ✅ `/create` — icono `<Rocket />` en el botón principal
 - ✅ Protocol Stats button en home — gradiente vivo amarillo→teal + dot verde live
 - ✅ `indexer.ts` — `getActiveRoomsByPlayer`, `getContractStats`, `getRoomsCreatedAt`
+- ✅ Favicon — `app/icon.png` + metadata en `layout.tsx`

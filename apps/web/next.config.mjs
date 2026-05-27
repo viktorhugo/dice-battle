@@ -7,6 +7,14 @@ const tunnelHost = process.env.TUNNEL_HOST;
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      { protocol: "https", hostname: "avtr.cc" },
+      // Allow any hostname for Celoname avatars/banners set by users
+      { protocol: "https", hostname: "**" },
+    ],
+  },
   experimental: {
     webpackMemoryOptimizations: true,
   },

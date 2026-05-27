@@ -430,4 +430,68 @@ contract DailyTournamentTest is Test {
         uint256 expected = (uint256(pool) * 5_000) / 10_000;
         assertEq(usdt.balanceOf(alice) - before, expected);
     }
+
+    // ============================================================
+    //                      NICKNAME REGISTRY
+    // ============================================================
+
+    function test_setNickname_storesCorrectly() public {
+        vm.prank(alice);
+        tournament.setNickname("CryptoBeast");
+
+        assertEq(tournament.getNickname(alice), "CryptoBeast");
+    }
+
+    function test_setNickname_canUpdate() public {
+        vm.startPrank(alice);
+        tournament.setNickname("OldName");
+        tournament.setNickname("NewName");
+        vm.stopPrank();
+
+        assertEq(tournament.getNickname(alice), "NewName");
+    }
+
+    function test_setNickname_revertsOnEmpty() public {
+        vm.prank(alice);
+        vm.expectRevert(DailyTournament.NicknameEmpty.selector);
+        tournament.setNickname("");
+    }
+
+    function test_setNickname_revertsOnTooLong() public {
+        // 21 chars — exceeds 20-byte limit
+        vm.prank(alice);
+        vm.expectRevert(DailyTournament.NicknameTooLong.selector);
+        tournament.setNickname("ThisNameIsTooLongXXXXX");
+    }
+
+    function test_setNickname_accepts20Bytes() public {
+        // Exactly 20 chars — boundary, should succeed
+        vm.prank(alice);
+        tournament.setNickname("ExactlyTwentyCharsXX");
+
+        assertEq(tournament.getNickname(alice), "ExactlyTwentyCharsXX");
+    }
+
+    function test_getNickname_returnsEmptyForUnregistered() public view {
+        assertEq(tournament.getNickname(alice), "");
+    }
+
+    function test_setNickname_emitsEvent() public {
+        vm.prank(alice);
+        vm.expectEmit(true, false, false, true);
+        emit DailyTournament.NicknameSet(alice, "CryptoBeast");
+        tournament.setNickname("CryptoBeast");
+    }
+
+    function test_setNickname_independentPerPlayer() public {
+        vm.prank(alice);
+        tournament.setNickname("AliceNick");
+
+        vm.prank(bob);
+        tournament.setNickname("BobNick");
+
+        assertEq(tournament.getNickname(alice), "AliceNick");
+        assertEq(tournament.getNickname(bob),   "BobNick");
+        assertEq(tournament.getNickname(carol),  "");
+    }
 }

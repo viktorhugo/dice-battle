@@ -8,9 +8,10 @@ import { useMiniPay } from "@/hooks/useMiniPay";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHAIN_ID, NETWORK } from "@/lib/constants";
-import { NETWORK_LABEL, truncateAddress } from "@/lib/utils";
+import { NETWORK_LABEL } from "@/lib/utils";
+import { useDisplayName } from "@/hooks/useDisplayName";
 
-function ConnectButton({ address, isConnected }: { address?: string; isConnected: boolean }) {
+function ConnectButton({ address, isConnected, displayName }: { address?: string; isConnected: boolean; displayName: string }) {
   const { open } = useAppKit();
   return (
     <button
@@ -25,7 +26,7 @@ function ConnectButton({ address, isConnected }: { address?: string; isConnected
 
       <Wallet className="relative z-10 h-3.5 w-3.5 shrink-0" />
       <span className="relative z-10">
-        {isConnected && address ? truncateAddress(address) : "Enter Arena"}
+        {isConnected && address ? displayName : "Enter Arena"}
       </span>
     </button>
   );
@@ -35,6 +36,7 @@ export function WalletBar() {
   const { isMiniPay, checked, address, isConnected } = useMiniPay();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
+  const displayName = useDisplayName(address);
 
   const isWrongNetwork = isConnected && checked && chainId !== CHAIN_ID;
 
@@ -52,7 +54,7 @@ export function WalletBar() {
           )}
 
           {checked && !isMiniPay && (
-            <ConnectButton address={address} isConnected={isConnected} />
+            <ConnectButton address={address} isConnected={isConnected} displayName={displayName} />
           )}
 
           {checked && isConnected && address && (

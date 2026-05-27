@@ -22,6 +22,7 @@ import Image from "next/image";
 import { Dices } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { getTokenSymbol, getTokenIcon, truncateAddress, formatDate, timeAgo } from "@/lib/utils";
+import { useDisplayName } from "@/hooks/useDisplayName";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { useFireworks } from "@/hooks/useFireworks";
 import { useAshes } from "@/hooks/useAshes";
@@ -206,6 +207,9 @@ export default function GamePage() {
   const tokenSymbol = room ? getTokenSymbol(room.token) : "";
   const tokenIcon   = room ? getTokenIcon(room.token) : "";
   const ZERO_ADDR   = "0x0000000000000000000000000000000000000000";
+
+  const hostDisplayName  = useDisplayName(room?.playerA);
+  const guestDisplayName = useDisplayName(room?.playerB && room.playerB !== ZERO_ADDR ? room.playerB : undefined);
   const hasGuest    = room?.playerB && room.playerB !== ZERO_ADDR;
 
   const hasSecret = !!loadSecret(params.roomId);
@@ -351,7 +355,7 @@ export default function GamePage() {
           {/* Host side */}
           <div className="flex flex-col items-center gap-2">
             <DicePair roll1={result?.rollA1} roll2={result?.rollA2} label="HOST" delay={0} />
-            <span className="font-mono text-[9px] text-white/35">{truncateAddress(room.playerA)}</span>
+            <span className="font-mono text-[9px] text-white/35">{hostDisplayName}</span>
             {hostStats && (() => {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;
               const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
@@ -376,7 +380,7 @@ export default function GamePage() {
           <div className="flex flex-col items-center gap-2">
             <DicePair roll1={result?.rollB1} roll2={result?.rollB2} label="GUEST" delay={200} />
             {hasGuest
-              ? <span className="font-mono text-[9px] text-white/35">{truncateAddress(room.playerB)}</span>
+              ? <span className="font-mono text-[9px] text-white/35">{guestDisplayName}</span>
               : <span className="font-mono text-[9px] text-white/20">waiting…</span>
             }
             {guestStats && (() => {

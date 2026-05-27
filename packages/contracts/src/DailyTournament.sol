@@ -65,8 +65,17 @@ contract DailyTournament is Ownable, ReentrancyGuard {
     mapping(uint256 => Day) public tournamentDays;
 
     // =============================================================
+    //                     NICKNAME REGISTRY
+    // =============================================================
+
+    /// @notice On-chain display name per player. Empty string = no nickname set.
+    mapping(address => string) private _nicknames;
+
+    // =============================================================
     //                          EVENTS
     // =============================================================
+
+    event NicknameSet(address indexed player, string nickname);
 
     event DayFunded(uint256 indexed dayId, uint256 amount, uint128 totalPool);
     event WinnersSet(uint256 indexed dayId, address[3] top, uint32[3] wins, uint128 pool);
@@ -87,6 +96,10 @@ contract DailyTournament is Ownable, ReentrancyGuard {
     error NothingToSweep();
     error InvalidWinners();
     error InvalidRank();
+
+    // Nickname registry errors
+    error NicknameEmpty();
+    error NicknameTooLong();
 
     // =============================================================
     //                       CONSTRUCTOR
@@ -232,6 +245,29 @@ contract DailyTournament is Ownable, ReentrancyGuard {
     /// @notice Returns the current UTC day ID.
     function currentDayId() external view returns (uint256) {
         return block.timestamp / DAY_SECONDS;
+    }
+
+    // =============================================================
+    //                     NICKNAME REGISTRY
+    // =============================================================
+
+    /**
+     * @notice Set or update your display name. Max 20 bytes (UTF-8).
+     * @dev Stores raw bytes — frontend should validate charset before calling.
+     * @param name The nickname to register.
+     */
+    function setNickname(string calldata name) external {
+        if (bytes(name).length == 0) revert NicknameEmpty();
+        if (bytes(name).length > 20) revert NicknameTooLong();
+        _nicknames[msg.sender] = name;
+        emit NicknameSet(msg.sender, name);
+    }
+
+    /**
+     * @notice Returns the registered nickname for a player, or empty string if none.
+     */
+    function getNickname(address player) external view returns (string memory) {
+        return _nicknames[player];
     }
 
     /**

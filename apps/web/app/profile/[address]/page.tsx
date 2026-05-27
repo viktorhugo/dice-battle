@@ -4,9 +4,15 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { useConnection } from "wagmi";
+import { Pencil, Plus } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
+import { NicknameEditModal } from "@/components/NicknameEditModal";
+import { useNickname } from "@/hooks/useNickname";
+import { useCeloProfile } from "@/hooks/useCeloProfile";
 import { getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { getPlayerProfile, type IndexerPlayer, type IndexerProfileRoom } from "@/lib/indexer";
@@ -192,6 +198,13 @@ function AchievementCard({
 
 export default function ProfilePage() {
   const { address } = useParams<{ address: string }>();
+  const { address: connectedAddress } = useConnection();
+  const isOwnProfile = !!connectedAddress && connectedAddress.toLowerCase() === address.toLowerCase();
+
+  const { data: nickname, refetch: refetchNickname } = useNickname(address);
+  const { profile: celoProfile } = useCeloProfile(address);
+  const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
+
   const [player, setPlayer] = useState<IndexerPlayer | null>(null);
   const [rooms, setRooms] = useState<IndexerProfileRoom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,29 +255,119 @@ export default function ProfilePage() {
         <div className="w-10" />
       </header>
 
-      {/* Avatar + address + copy + streak */}
-      <div className="flex flex-col items-center gap-2 pt-2">
-        {loading ? (
-          <Skeleton className="h-12 w-12 rounded-full" />
-        ) : (
-          <Identicon address={address} size={48} className="ring-2 ring-white/10" />
+      {/* ── Profile hero — solo si hay banner ────────────────────────────── */}
+      {celoProfile?.banner ? (
+        <div className="relative -mx-4 -mt-2">
+          {/* Banner */}
+          <div className="relative h-[10rem] w-full overflow-hidden rounded-b-2xl">
+            <Image
+              src={celoProfile.banner}
+              alt="Profile banner"
+              fill
+              className="object-cover [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"
+              unoptimized
+            />
+          </div>
+
+          {/* Avatar superpuesto */}
+          <div className="absolute -bottom-7 left-4">
+            {loading ? (
+              <Skeleton className="h-16 w-16 rounded-full ring-4 ring-[#b1b1b1]" />
+            ) : celoProfile.avatar ? (
+              <div className="relative h-16 w-16 rounded-full ring-4 ring-[#b1b1b1] overflow-hidden">
+                <Image
+                  src={celoProfile.avatar}
+                  alt={celoProfile.displayName}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <Identicon address={address} size={64} className="ring-4 ring-[#b1b1b1] rounded-full" />
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Name + address row ────────────────────────────────────────────── */}
+      <div className={`flex flex-col gap-0.5 pl-1 ${celoProfile?.banner ? "pt-4" : "pt-2 flex-row items-center gap-3"}`}>
+        {/* Avatar sin banner — inline a la izquierda */}
+        {!celoProfile?.banner && (
+          <div className="shrink-0">
+            {loading ? (
+              <Skeleton className="h-12 w-12 rounded-full" />
+            ) : celoProfile?.avatar ? (
+              <div className="relative h-12 w-12 rounded-full ring-2 ring-[#b1b1b1] overflow-hidden">
+                <Image
+                  src={celoProfile.avatar}
+                  alt={celoProfile.displayName}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <Identicon address={address} size={48} className="ring-2 ring-[#b1b1b1] rounded-full" />
+            )}
+          </div>
         )}
 
+        <div className="flex flex-col gap-0.5">
+        {/* Primary display name: on-chain nickname > celoname display > address */}
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold text-white leading-tight">
+            {nickname || celoProfile?.displayName || truncateAddress(address)}
+          </span>
+          {isOwnProfile && (
+            nickname ? (
+              <button
+                onClick={() => setNicknameModalOpen(true)}
+                className="text-white/30 hover:text-white/60 transition-colors"
+                title="Edit nickname"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setNicknameModalOpen(true)}
+                className="flex items-center gap-1 rounded-full border border-[#FCFF52]/40 bg-[#FCFF52]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#FCFF52] hover:bg-[#FCFF52]/20 transition-all"
+              >
+                <Plus className="h-3 w-3" /> nickname
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Celoname subtle */}
+        {celoProfile && (
+          <span className="text-xs text-[#00C4B3]/70 font-mono">{celoProfile.fullName}</span>
+        )}
+
+        {/* Address copy */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-0.5 transition-colors hover:bg-white/5 active:opacity-70"
+          className="flex items-center gap-1 w-fit rounded-md px-1 py-0.5 transition-colors hover:bg-white/5 active:opacity-70"
           title="Copy address"
         >
-          <span className="font-mono text-sm text-white">{truncateAddress(address)}</span>
-          <span className="text-xs text-white/30">{copied ? "✓" : "⎘"}</span>
+          <span className="font-mono text-[10px] text-white/30">{truncateAddress(address)}</span>
+          <span className="text-[10px] text-white/20">{copied ? "✓" : "⎘"}</span>
         </button>
 
         {!loading && player && Number(player.currentStreak) > 0 && (
-          <span className="text-sm text-orange-400">
+          <span className="text-sm text-orange-400 mt-1">
             🔥 {player.currentStreak} win streak
           </span>
         )}
+        </div>
       </div>
+
+      <NicknameEditModal
+        current={nickname ?? ""}
+        open={nicknameModalOpen}
+        onClose={() => setNicknameModalOpen(false)}
+        onSaved={() => { refetchNickname(); }}
+      />
 
       {/* Stat cards */}
       {loading ? (
