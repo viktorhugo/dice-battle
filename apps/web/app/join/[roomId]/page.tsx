@@ -17,11 +17,12 @@ import {
   type PlayerMiniStats,
   type H2HSummary,
 } from "@/lib/indexer";
-import { getTokenSymbol, getTokenIcon, timeAgo } from "@/lib/utils";
+import { getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { useDisplayName } from "@/hooks/useDisplayName";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
+import { LightRays } from "@/components/ui/light-rays";
 import { CircleSlash } from "lucide-react";
 import { FloatingToast } from "@/components/ui/floating-toast";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
@@ -70,6 +71,14 @@ export default function JoinRoomPage() {
     functionName: "allowance",
     args: [address!, GAME_ADDRESS],
     query: { enabled: !!address && !!room?.token },
+  });
+
+  const { data: userBalance } = useReadContract({
+    address: room?.token,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address!],
+    query: { enabled: !!address && !!room?.token, refetchInterval: 10_000 },
   });
 
   function isAllowanceReady(allowance: bigint | undefined) {
@@ -348,6 +357,11 @@ export default function JoinRoomPage() {
   const tokenSymbol = getTokenSymbol(room.token);
   const tokenIcon = getTokenIcon(room.token);
 
+  const hasInsufficientBalance = userBalance != null && room.stake > userBalance;
+  const balanceFormatted = userBalance != null && tokenDecimals != null
+    ? Number(formatUnits(userBalance, tokenDecimals)).toFixed(2)
+    : null;
+
   const cardBorder = tokenSymbol === "USDC"
     ? "border-blue-500/25"
     : tokenSymbol === "USDT"
@@ -373,16 +387,29 @@ export default function JoinRoomPage() {
       </header>
 
       {/* Main info card */}
-      <section className={`relative overflow-hidden rounded-2xl border bg-zinc-900/80 backdrop-blur-md p-5 ${cardBorder}`}>
-        {/* Token watermark */}
+      <section className={`relative overflow-hidden rounded-2xl border-2 bg-zinc-900/80 backdrop-blur-md p-5 ${cardBorder}`}>
+        <LightRays
+          count={5}
+          color="rgba(252, 255, 82, 0.18)"
+          blur={40}
+          speed={16}
+          length="100%"
+        />
+        {/* Token watermark — top-right, 70% visible */}
+        <img
+          src={tokenIcon}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -right-6 -top-4 h-24 w-24 opacity-[0.4] select-none"
+        />
 
         <div className="relative flex flex-col gap-4">
           
           {/* Host */}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wider text-zinc-600">Host</span>
+            <span className="text-[11px] uppercase tracking-wider text-zinc-400">Host</span>
             <p className="text-sm">
-              <span className="font-mono text-zinc-300">{hostDisplayName}</span>
+              <span className="font-mono text-zinc-200">{hostDisplayName}</span>
             </p>
             {hostStats && (() => {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;
@@ -410,15 +437,15 @@ export default function JoinRoomPage() {
                 ? formatUnits(room.stake, tokenDecimals)
                 : "…"}{" "}{tokenSymbol}
             </span>
-            <span className="text-xs text-zinc-500">{stateLabel}</span>
+            <span className="text-xs text-zinc-400">{stateLabel}</span>
           </div>
 
           <div className="border-t border-zinc-800" />
 
           {/* Prize */}
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-zinc-500">Prize if you win</span>
-            <span className="font-mono text-sm font-semibold text-green-400">
+            <span className="text-xs text-zinc-400">Prize if you win</span>
+            <span className="font-mono text-sm font-semibold text-green-300">
               ~{tokenDecimals != null
                 ? (Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)
                 : "…"}{" "}
@@ -429,8 +456,8 @@ export default function JoinRoomPage() {
           {/* Created */}
           {createdAt && (
             <div className="flex items-baseline justify-between">
-              <span className="text-xs text-zinc-600">Created</span>
-              <span className="text-xs text-zinc-500">{timeAgo(createdAt)}</span>
+              <span className="text-xs text-zinc-400">Created</span>
+              <span className="text-xs text-zinc-300">{formatDate(createdAt)} <span className="text-zinc-500">({timeAgo(createdAt)})</span></span>
             </div>
           )}
         </div>
@@ -455,10 +482,10 @@ export default function JoinRoomPage() {
       {/* Player A — waiting for opponent */}
       {room.state === ROOM_STATE.OPEN && isPlayerA && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col gap-3">
-          <p className="text-sm text-zinc-400">You created this room. Share the link to challenge your opponent.</p>
+          <p className="text-sm text-zinc-300">You created this room. Share the link to challenge your opponent.</p>
           <SoftBlurText
             text="Waiting for someone to join…"
-            className="text-sm text-center text-zinc-600 block"
+            className="text-sm text-center text-yellow-600 block"
             loop
           />
           {cancelSuccess ? (
@@ -499,23 +526,38 @@ export default function JoinRoomPage() {
       {/* Player B — can join */}
       {room.state === ROOM_STATE.OPEN && !isPlayerA && (
         <>
-          <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
-            allowanceReady
-              ? "border-green-500/20 bg-green-500/5 text-green-400"
-              : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
-          }`}>
-            <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
-            {allowanceReady ? "Ready — 1 transaction to confirm" : "Needs approval + join — 2 transactions"}
-          </div>
+          {/* Balance / allowance status row */}
+          {hasInsufficientBalance ? (
+            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/8 px-3 py-2.5 text-xs text-red-400">
+              <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400" />
+              Insufficient balance — you have {balanceFormatted} {tokenSymbol}
+            </div>
+          ) : (
+            <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
+              allowanceReady
+                ? "border-green-500/20 bg-green-500/5 text-green-400"
+                : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
+            }`}>
+              <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
+              {allowanceReady ? "Ready — 1 transaction to confirm" : "Needs approval + join — 2 transactions"}
+            </div>
+          )}
+
           <button
             type="button"
-            disabled={!isConnected || busy}
+            disabled={!isConnected || busy || hasInsufficientBalance}
             onClick={onJoin}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80 disabled:opacity-40"
+            className={`flex items-center justify-center gap-2 rounded-2xl py-4 text-center font-semibold transition-colors active:opacity-80 disabled:opacity-40 ${
+              hasInsufficientBalance
+                ? "bg-red-500/20 border border-red-500/40 text-red-400 cursor-not-allowed"
+                : "bg-celo-yellow text-celo-dark"
+            }`}
           >
             {busy
               ? <><Spinner /> Joining…</>
-              : `Match ${tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…"} ${tokenSymbol}`}
+              : hasInsufficientBalance
+                ? `Insufficient ${tokenSymbol} — top up to continue`
+                : `Match ${tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…"} ${tokenSymbol}`}
           </button>
         </>
       )}
