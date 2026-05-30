@@ -225,10 +225,10 @@ contract DailyTournamentTest is Test {
     //                          claim
     // ============================================================
 
-    function test_claim_rank0_receives50Pct() public {
+    function test_claim_rank0_receives60Pct() public {
         _setupFinalized(DAY_0);
 
-        uint256 expected = (POOL * 5_000) / 10_000; // 50%
+        uint256 expected = (POOL * 6_000) / 10_000; // 60%
         uint256 before   = usdt.balanceOf(alice);
 
         tournament.claim(DAY_0, 0);
@@ -236,10 +236,10 @@ contract DailyTournamentTest is Test {
         assertEq(usdt.balanceOf(alice) - before, expected);
     }
 
-    function test_claim_rank1_receives30Pct() public {
+    function test_claim_rank1_receives25Pct() public {
         _setupFinalized(DAY_0);
 
-        uint256 expected = (POOL * 3_000) / 10_000; // 30%
+        uint256 expected = (POOL * 2_500) / 10_000; // 25%
         uint256 before   = usdt.balanceOf(bob);
 
         tournament.claim(DAY_0, 1);
@@ -247,10 +247,10 @@ contract DailyTournamentTest is Test {
         assertEq(usdt.balanceOf(bob) - before, expected);
     }
 
-    function test_claim_rank2_receives20Pct() public {
+    function test_claim_rank2_receives15Pct() public {
         _setupFinalized(DAY_0);
 
-        uint256 expected = (POOL * 2_000) / 10_000; // 20%
+        uint256 expected = (POOL * 1_500) / 10_000; // 15%
         uint256 before   = usdt.balanceOf(carol);
 
         tournament.claim(DAY_0, 2);
@@ -333,8 +333,8 @@ contract DailyTournamentTest is Test {
         vm.prank(owner);
         tournament.sweepUnclaimed(DAY_0);
 
-        // Owner should receive bob's 30% + carol's 20% = 50%
-        uint256 expected = (POOL * 3_000) / 10_000 + (POOL * 2_000) / 10_000;
+        // Owner should receive bob's 25% + carol's 15% = 40%
+        uint256 expected = (POOL * 2_500) / 10_000 + (POOL * 1_500) / 10_000;
         assertApproxEqAbs(usdt.balanceOf(owner) - before, expected, 2);
     }
 
@@ -412,8 +412,8 @@ contract DailyTournamentTest is Test {
         assertTrue(finalized);
     }
 
-    /// @dev Fuzz: claiming rank 0 always gives exactly 50% of the pool.
-    function testFuzz_claim_rank0_alwaysHalf(uint128 pool) public {
+    /// @dev Fuzz: claiming rank 0 always gives exactly 60% of the pool.
+    function testFuzz_claim_rank0_always60Pct(uint128 pool) public {
         pool = uint128(bound(pool, 2, type(uint128).max / 10_000));
 
         vm.startPrank(owner);
@@ -427,7 +427,7 @@ contract DailyTournamentTest is Test {
         uint256 before   = usdt.balanceOf(alice);
         tournament.claim(DAY_0, 0);
 
-        uint256 expected = (uint256(pool) * 5_000) / 10_000;
+        uint256 expected = (uint256(pool) * 6_000) / 10_000;
         assertEq(usdt.balanceOf(alice) - before, expected);
     }
 

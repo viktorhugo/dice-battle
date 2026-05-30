@@ -18,7 +18,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  *   - Winners (or anyone on their behalf) call claim() any time after finalization.
  *   - The pool is funded by the owner from protocol-accrued fees via fundDay().
  *
- * Prize split: 50 % / 30 % / 20 %  (SHARES sums to 10 000 BPS)
+ * Prize split: 60 % / 25 % / 15 %  (SHARES sums to 10 000 BPS)
  *
  * Trust model:
  *   The owner is trusted to supply accurate winner data from the indexer.
@@ -42,9 +42,9 @@ contract DailyTournament is Ownable, ReentrancyGuard {
     uint256 public constant SWEEP_DELAY = 30 days;
 
     /// @notice Prize shares in BPS (must sum to 10 000).
-    uint16 public constant SHARE_FIRST  = 5_000; // 50%
-    uint16 public constant SHARE_SECOND = 3_000; // 30%
-    uint16 public constant SHARE_THIRD  = 2_000; // 20%
+    uint16 public constant SHARE_FIRST  = 6_000; // 60%
+    uint16 public constant SHARE_SECOND = 2_500; // 25%
+    uint16 public constant SHARE_THIRD  = 1_500; // 15%
 
     // =============================================================
     //                          STORAGE
@@ -148,7 +148,7 @@ contract DailyTournament is Ownable, ReentrancyGuard {
         uint256 dayId,
         address[3] calldata top,
         uint32[3]  calldata winCounts
-    ) external onlyOwner {
+    ) external onlyOwner nonReentrant {
         if (block.timestamp < (dayId + 1) * DAY_SECONDS) revert DayNotOver();
         if (tournamentDays[dayId].finalizedAt != 0) revert AlreadyFinalized();
         if (top[0] == address(0)) revert InvalidWinners();
@@ -167,6 +167,18 @@ contract DailyTournament is Ownable, ReentrancyGuard {
         tournamentDays[dayId].finalizedAt = uint64(block.timestamp);
         tournamentDays[dayId].top         = top;
         tournamentDays[dayId].winCounts   = winCounts;
+
+        // Immediately return shares for empty ranks to owner — no 30-day wait needed.
+        uint256 ownerAmount = 0;
+        for (uint8 rank = 0; rank < 3; rank++) {
+            if (top[rank] == address(0)) {
+                tournamentDays[dayId].claimed |= uint8(1 << rank);
+                ownerAmount += (uint256(tournamentDays[dayId].pool) * _share(rank)) / 10_000;
+            }
+        }
+        if (ownerAmount > 0) {
+            token.safeTransfer(owner(), ownerAmount);
+        }
 
         emit WinnersSet(dayId, top, winCounts, tournamentDays[dayId].pool);
     }
