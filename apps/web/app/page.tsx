@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarChart2 } from "lucide-react";
+import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarChart2, Trophy } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -143,6 +143,22 @@ export default function Home() {
           <span className="flex flex-col items-center gap-2">
             <Medal className="h-5 w-5" style={{ color: "#FCFF52" }} />
             <span className="font-heading text-sm font-semibold text-white">Leaderboard</span>
+          </span>
+        </Link>
+
+        {/* Daily Tournament */}
+        <Link
+          href="/tournament"
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border border-yellow-500/25 bg-gradient-to-r from-yellow-500/8 to-yellow-400/4 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-yellow-500/40 hover:from-yellow-500/12 hover:to-yellow-400/8"
+        >
+          <span className="flex items-center justify-center gap-2">
+            <Trophy className="h-4 w-4 text-yellow-400 transition-colors group-hover:text-yellow-300" />
+            <span className="font-heading text-sm font-semibold text-white/75 transition-colors group-hover:text-white/90">
+              Weekly Tournament
+            </span>
+            <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
+              Prize pool
+            </span>
           </span>
         </Link>
 
