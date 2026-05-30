@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseUnits, decodeEventLog, type Address } from "viem";
 import { useConnection, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { Trophy, Crown, Flame, Clock, Coins, ChevronRight, CalendarDays } from "lucide-react";
+import { Trophy, Crown, Flame, Clock, Coins, ChevronRight, CalendarDays, ArrowBigLeftDash } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,31 +18,14 @@ import {
   ERC20_ABI,
   GAME_ADDRESS,
   TOURNAMENT_ADDRESS,
+  TOURNAMENT_ABI,
   getTokenAddress,
 } from "@/lib/constants";
 import { getLeaderboardPeriod, type LeaderboardEntry } from "@/lib/indexer";
 import { useDisplayName } from "@/hooks/useDisplayName";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
-
-// ─── ABI ──────────────────────────────────────────────────────────────────────
-
-const DAILY_TOURNAMENT_ABI = [
-  {
-    name: "dayInfo",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "dayId", type: "uint256" }],
-    outputs: [
-      { name: "pool",      type: "uint128"    },
-      { name: "finalized", type: "bool"       },
-      { name: "top",       type: "address[3]" },
-      { name: "wins",      type: "uint32[3]"  },
-      { name: "prizes",    type: "uint256[3]" },
-      { name: "claimed",   type: "bool[3]"    },
-    ],
-  },
-] as const;
+import { useTranslations } from "next-intl";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -150,22 +133,52 @@ function TournamentRow({ entry, rank }: { entry: LeaderboardEntry; rank: number 
   );
 }
 
-function WinnerRow({ address, rank, prize }: { address: Address; rank: number; prize: bigint }) {
+function WinnerRow({
+  address,
+  rank,
+  prize,
+  claimed,
+  canClaim,
+  onClaim,
+  claiming,
+  claimedLabel,
+  claimingLabel,
+}: {
+  address: Address;
+  rank: number;
+  prize: bigint;
+  claimed: boolean;
+  canClaim: boolean;
+  onClaim: () => void;
+  claiming: boolean;
+  claimedLabel: string;
+  claimingLabel: string;
+}) {
   const displayName = useDisplayName(address);
   return (
-    <li>
-      <Link
-        href={`/profile/${address}`}
-        className={`flex items-center gap-3 rounded-xl border px-4 py-3 active:opacity-70 transition-opacity ${rowHighlight(rank)}`}
-      >
-        <span className="flex w-5 items-center justify-center"><RankBadge rank={rank} /></span>
-        <Identicon address={address} size={28} />
-        <span className="flex-1 truncate text-xs text-white">{displayName}</span>
+    <li className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${rowHighlight(rank)}`}>
+      <span className="flex w-5 items-center justify-center"><RankBadge rank={rank} /></span>
+      <Identicon address={address} size={28} />
+      <Link href={`/profile/${address}`} className="flex-1 truncate text-xs text-white active:opacity-70">
+        {displayName}
+      </Link>
+      {claimed ? (
+        <span className="text-xs text-white/30">{claimedLabel}</span>
+      ) : canClaim ? (
+        <button
+          type="button"
+          onClick={onClaim}
+          disabled={claiming}
+          className="flex items-center gap-1.5 rounded-lg bg-green-500/20 border border-green-500/40 px-3 py-1.5 text-xs font-semibold text-green-400 active:opacity-70 disabled:opacity-40 transition-opacity"
+        >
+          {claiming ? <Spinner /> : null}
+          {claiming ? claimingLabel : `Claim ${(Number(prize) / 1e6).toFixed(2)} USDT`}
+        </button>
+      ) : (
         <span className="font-mono text-sm font-semibold text-green-400">
           +{(Number(prize) / 1e6).toFixed(2)} USDT
         </span>
-        <ChevronRight className="h-3.5 w-3.5 text-white/20" />
-      </Link>
+      )}
     </li>
   );
 }
@@ -177,6 +190,8 @@ export default function TournamentPage() {
   const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
+  const tournament = useTranslations("tournament");
+  const common = useTranslations("common");
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [lbLoading, setLbLoading] = useState(true);
@@ -184,6 +199,7 @@ export default function TournamentPage() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "approving" | "creating">("idle");
   const [pendingRoom, setPendingRoom] = useState<{ roomId: string; secret: `0x${string}` } | null>(null);
+  const [claimingRank, setClaimingRank] = useState<number | null>(null);
   const [error, setError] = useErrorToast();
 
   const saturdayId = upcomingSaturdayDayId();
@@ -193,7 +209,7 @@ export default function TournamentPage() {
   // Prize pool for the upcoming Saturday
   const { data: weekInfo } = useReadContract({
     address: TOURNAMENT_ADDRESS,
-    abi: DAILY_TOURNAMENT_ABI,
+    abi: TOURNAMENT_ABI,
     functionName: "dayInfo",
     args: [saturdayId],
     query: { enabled: hasTournament, refetchInterval: 30_000 },
@@ -202,7 +218,7 @@ export default function TournamentPage() {
   // Last week's finalized winners
   const { data: lastWeekInfo } = useReadContract({
     address: TOURNAMENT_ADDRESS,
-    abi: DAILY_TOURNAMENT_ABI,
+    abi: TOURNAMENT_ABI,
     functionName: "dayInfo",
     args: [prevSaturdayId],
     query: { enabled: hasTournament },
@@ -292,8 +308,30 @@ export default function TournamentPage() {
     }
   }
 
+  async function onClaim(rank: number) {
+    if (!address || !publicClient) return;
+    setClaimingRank(rank);
+    try {
+      const hash = await writeContractAsync({
+        address: TOURNAMENT_ADDRESS,
+        abi: TOURNAMENT_ABI,
+        functionName: "claim",
+        args: [prevSaturdayId, rank],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+    } catch (e) {
+      logger.error("[tournament] claim:", e);
+      setError(e);
+    } finally {
+      setClaimingRank(null);
+    }
+  }
+
   const pool = weekInfo ? Number(weekInfo[0]) / 1e6 : null;
   const lastWeekFinalized = lastWeekInfo?.[1] ?? false;
+  const lastWeekTop     = lastWeekInfo?.[2] as readonly Address[] | undefined;
+  const lastWeekPrizes  = lastWeekInfo?.[4] as readonly bigint[]  | undefined;
+  const lastWeekClaimed = lastWeekInfo?.[5] as readonly boolean[]  | undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -309,10 +347,12 @@ export default function TournamentPage() {
 
       {/* Header */}
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">← Back</Link>
+        <Link href="/" className="text-sm text-white/60 flex items-center gap-1">
+          <ArrowBigLeftDash /> {common("back")}
+        </Link>
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-[#FCFF52]" />
-          <h1 className="text-lg font-semibold">Weekly Tournament</h1>
+          <h1 className="text-lg font-semibold">{tournament("title")}</h1>
         </div>
         <div className="w-10" />
       </header>
@@ -325,7 +365,7 @@ export default function TournamentPage() {
             <div>
               <div className="flex items-center gap-1.5 mb-1">
                 <Coins className="h-3.5 w-3.5 text-yellow-400/70" />
-                <p className="text-xs text-white/50">Prize pool</p>
+                <p className="text-xs text-white/50">{tournament("prize_pool")}</p>
               </div>
               {pool !== null ? (
                 <p className="text-3xl font-bold text-white tabular-nums">
@@ -339,7 +379,7 @@ export default function TournamentPage() {
             <div className="text-right">
               <div className="flex items-center justify-end gap-1.5 mb-1">
                 <Clock className="h-3.5 w-3.5 text-white/40" />
-                <p className="text-xs text-white/50">Ends Saturday</p>
+                <p className="text-xs text-white/50">{tournament("ends_saturday")}</p>
               </div>
               <p className="font-mono text-sm font-semibold text-[#FCFF52]">{countdown}</p>
             </div>
@@ -348,7 +388,7 @@ export default function TournamentPage() {
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
           <Trophy className="mx-auto mb-2 h-8 w-8 text-white/20" />
-          <p className="text-sm text-white/40">Tournament contract not deployed yet</p>
+          <p className="text-sm text-white/40">{tournament("not_deployed")}</p>
         </div>
       )}
 
@@ -356,7 +396,7 @@ export default function TournamentPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Flame className="h-4 w-4 text-orange-400" />
-          <h2 className="text-sm font-semibold text-white/70">This week&apos;s standings</h2>
+          <h2 className="text-sm font-semibold text-white/70">{tournament("this_weeks_standings")}</h2>
         </div>
 
         {lbLoading ? (
@@ -364,7 +404,7 @@ export default function TournamentPage() {
             {[0, 1, 2, 3].map((i) => <RowSkeleton key={i} />)}
           </ul>
         ) : leaderboard.length === 0 ? (
-          <p className="py-6 text-center text-sm text-white/30">No games played this week yet</p>
+          <p className="py-6 text-center text-sm text-white/30">{tournament("no_games_this_week")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {leaderboard.map((entry, i) => (
@@ -388,28 +428,34 @@ export default function TournamentPage() {
         onClick={onQuickPlay}
         className="flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-4 font-semibold text-celo-dark active:opacity-80 disabled:opacity-40 transition-opacity"
       >
-        {step === "approving" && <><Spinner /> Approving…</>}
-        {step === "creating"  && <><Spinner /> Creating room…</>}
+        {step === "approving" && <><Spinner /> {tournament("approving")}</>}
+        {step === "creating"  && <><Spinner /> {tournament("creating")}</>}
         {step === "idle" && (
-          !isConnected ? "Connect wallet" : <>Play for the prize <Trophy className="h-4 w-4" /></>
+          !isConnected ? common("connect_wallet") : <>{tournament("play_for_prize")} <Trophy className="h-4 w-4" /></>
         )}
       </button>
 
       {/* Last week's winners */}
-      {lastWeekFinalized && lastWeekInfo && (
+      {lastWeekFinalized && lastWeekTop && lastWeekPrizes && lastWeekClaimed && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-yellow-400/70" />
-            <h2 className="text-sm font-semibold text-white/70">Last week&apos;s winners</h2>
+            <h2 className="text-sm font-semibold text-white/70">{tournament("last_weeks_winners")}</h2>
           </div>
           <ul className="flex flex-col gap-2">
-            {(lastWeekInfo[2] as readonly Address[]).map((addr, i) =>
+            {lastWeekTop.map((addr, i) =>
               addr !== ZERO_ADDRESS ? (
                 <WinnerRow
                   key={addr}
                   address={addr}
                   rank={i}
-                  prize={(lastWeekInfo[4] as readonly bigint[])[i]}
+                  prize={lastWeekPrizes[i]}
+                  claimed={lastWeekClaimed[i]}
+                  canClaim={isConnected && address?.toLowerCase() === addr.toLowerCase() && !lastWeekClaimed[i]}
+                  onClaim={() => onClaim(i)}
+                  claiming={claimingRank === i}
+                  claimedLabel={tournament("claimed")}
+                  claimingLabel={tournament("claiming")}
                 />
               ) : null
             )}

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useConnection } from "wagmi";
-import { Pencil, Plus } from "lucide-react";
+import { ArrowBigLeftDash, Pencil, Plus } from "lucide-react";
 import { WalletBar } from "@/components/WalletBar";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,7 @@ import { truncateAddress, getTokenSymbol } from "@/lib/utils";
 import { getPlayerProfile, type IndexerPlayer, type IndexerProfileRoom } from "@/lib/indexer";
 import { ACHIEVEMENTS, buildPlayerStats, sortedAchievements, type Achievement, type PlayerStats, type Rarity } from "@/lib/achievements";
 import { logger } from "@/lib/logger";
+import { useTranslations } from "next-intl";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
   );
 }
 
-function OutcomeBar({ wins, losses, ties }: { wins: number; losses: number; ties: number }) {
+function OutcomeBar({ wins, losses, ties, gamesLabel }: { wins: number; losses: number; ties: number; gamesLabel: string }) {
   const total = wins + losses + ties;
   if (total === 0) return null;
   const wPct = (wins / total) * 100;
@@ -86,14 +87,18 @@ function OutcomeBar({ wins, losses, ties }: { wins: number; losses: number; ties
       </div>
       <div className="flex justify-between px-0.5 text-xs">
         <span className="text-green-400">{wins}W</span>
-        <span className="text-white/30">{total} games</span>
+        <span className="text-white/30">{total} {gamesLabel}</span>
         <span className="text-red-400">{losses}L · <span className="text-yellow-400">{ties}T</span></span>
       </div>
     </div>
   );
 }
 
-function GameRow({ room, address }: { room: IndexerProfileRoom; address: string }) {
+function GameRow({ room, address, resultLabels }: {
+  room: IndexerProfileRoom;
+  address: string;
+  resultLabels: { tied: string; won: string; lost: string; expired: string };
+}) {
   const addrLower = address.toLowerCase();
   const opponent = room.playerA === addrLower ? room.playerB : room.playerA;
 
@@ -101,7 +106,7 @@ function GameRow({ room, address }: { room: IndexerProfileRoom; address: string 
   const isTie = room.state === "TIED";
   const isLoss = room.state === "RESOLVED" && !isWin;
 
-  const resultLabel = isTie ? "Tied" : isWin ? "Won" : isLoss ? "Lost" : "Expired";
+  const resultLabel = isTie ? resultLabels.tied : isWin ? resultLabels.won : isLoss ? resultLabels.lost : resultLabels.expired;
   const resultColor = isTie
     ? "text-yellow-400"
     : isWin
@@ -200,6 +205,14 @@ export default function ProfilePage() {
   const { address } = useParams<{ address: string }>();
   const { address: connectedAddress } = useConnection();
   const isOwnProfile = !!connectedAddress && connectedAddress.toLowerCase() === address.toLowerCase();
+  const profile = useTranslations("profile");
+
+  const resultLabels = {
+    tied:    profile("tied_label"),
+    won:     profile("won_label"),
+    lost:    profile("lost_label"),
+    expired: profile("expired_label"),
+  };
 
   const { data: nickname, refetch: refetchNickname } = useNickname(address);
   const { profile: celoProfile } = useCeloProfile(address);
@@ -250,8 +263,10 @@ export default function ProfilePage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">← Back</Link>
-        <h1 className="text-lg font-semibold">Profile</h1>
+        <Link href="/" className="text-sm text-white/60 flex items-center gap-1">
+          <ArrowBigLeftDash /> {profile("back")}
+        </Link>
+        <h1 className="text-lg font-semibold">{profile("title")}</h1>
         <div className="w-10" />
       </header>
 
@@ -259,7 +274,7 @@ export default function ProfilePage() {
       {celoProfile?.banner ? (
         <div className="relative -mx-4 -mt-2">
           {/* Banner */}
-          <div className="relative h-[10rem] w-full overflow-hidden rounded-b-2xl">
+          <div className="relative h-[12rem] w-full overflow-hidden rounded-b-2xl">
             <Image
               src={celoProfile.banner}
               alt="Profile banner"
@@ -333,7 +348,7 @@ export default function ProfilePage() {
                 onClick={() => setNicknameModalOpen(true)}
                 className="flex items-center gap-1 rounded-full border border-[#FCFF52]/40 bg-[#FCFF52]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#FCFF52] hover:bg-[#FCFF52]/20 transition-all"
               >
-                <Plus className="h-3 w-3" /> nickname
+                <Plus className="h-3 w-3" /> {profile("add_nickname")}
               </button>
             )
           )}
@@ -356,7 +371,7 @@ export default function ProfilePage() {
 
         {!loading && player && Number(player.currentStreak) > 0 && (
           <span className="text-sm text-orange-400 mt-1">
-            🔥 {player.currentStreak} win streak
+            🔥 {profile("win_streak", { count: player.currentStreak })}
           </span>
         )}
         </div>
@@ -382,10 +397,10 @@ export default function ProfilePage() {
       ) : player ? (
         <>
           <div className="grid grid-cols-4 gap-2">
-            <StatCard value={player.totalGames} label="games" />
-            <StatCard value={player.wins} label="wins" />
-            <StatCard value={`${winRate}%`} label="rate" />
-            <StatCard value={player.currentStreak} label="streak 🔥" />
+            <StatCard value={player.totalGames} label={profile("games_label")} />
+            <StatCard value={player.wins} label={profile("wins_label")} />
+            <StatCard value={`${winRate}%`} label={profile("rate_label")} />
+            <StatCard value={player.currentStreak} label={profile("streak_label")} />
           </div>
 
           {/* Outcome bar */}
@@ -393,43 +408,44 @@ export default function ProfilePage() {
             wins={Number(player.wins)}
             losses={Number(player.losses)}
             ties={Number(player.ties)}
+            gamesLabel={profile("games_label")}
           />
 
           {Number(player.longestStreak) > 0 && (
             <p className="text-center text-xs text-white/30">
-              Longest streak: {player.longestStreak}
+              {profile("longest_streak", { count: player.longestStreak })}
             </p>
           )}
         </>
       ) : (
         !loading && (
-          <p className="pt-4 text-center text-sm text-white/40">No games played yet.</p>
+          <p className="pt-4 text-center text-sm text-white/40">{profile("no_games")}</p>
         )
       )}
 
       {/* Dice stats */}
       {!loading && diceStats && (
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <p className="mb-2 text-xs font-semibold text-white/50">Dice stats</p>
+          <p className="mb-2 text-xs font-semibold text-white/50">{profile("dice_stats")}</p>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-sm font-bold text-white">{diceStats.avg}</p>
-              <p className="text-xs text-white/40">avg die</p>
+              <p className="text-xs text-white/40">{profile("avg_die")}</p>
             </div>
             <div>
               <p className="text-sm font-bold text-white">
                 {diceStats.bestHand.d1}+{diceStats.bestHand.d2}
               </p>
-              <p className="text-xs text-white/40">best hand</p>
+              <p className="text-xs text-white/40">{profile("best_hand")}</p>
             </div>
             <div>
               <p className="text-sm font-bold text-white">{diceStats.lucky}</p>
-              <p className="text-xs text-white/40">lucky №</p>
+              <p className="text-xs text-white/40">{profile("lucky_num")}</p>
             </div>
           </div>
           {avgDuration && (
             <p className="mt-2 text-center text-xs text-white/30">
-              Avg game duration: {avgDuration}
+              {profile("avg_duration", { duration: avgDuration })}
             </p>
           )}
         </div>
@@ -439,7 +455,7 @@ export default function ProfilePage() {
       {!loading && achievementList && (
         <>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white/60">Achievements</h2>
+            <h2 className="text-sm font-semibold text-white/60">{profile("achievements")}</h2>
             <span className="text-xs text-white/30">
               {unlockedCount}/{ACHIEVEMENTS.length}
             </span>
@@ -460,10 +476,10 @@ export default function ProfilePage() {
       {/* Recent games */}
       {!loading && rooms.length > 0 && (
         <>
-          <h2 className="text-sm font-semibold text-white/60">Recent games</h2>
+          <h2 className="text-sm font-semibold text-white/60">{profile("recent_games")}</h2>
           <ul className="flex flex-col gap-2">
             {rooms.map((room) => (
-              <GameRow key={room.id} room={room} address={address} />
+              <GameRow key={room.id} room={room} address={address} resultLabels={resultLabels} />
             ))}
           </ul>
         </>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Hex } from "viem";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ interface Props {
 export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const secretBackup = useTranslations("secretBackup");
 
   async function handleCopy() {
     try {
@@ -58,11 +60,14 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
           <div className="flex items-center gap-2">
             <span className="text-lg">⚠️</span>
             <DialogTitle className="text-base font-semibold text-orange-400">
-              Save your secret — required to reveal
+              {secretBackup("title")}
             </DialogTitle>
           </div>
           <DialogDescription className="text-white/50 text-xs leading-relaxed">
-            This secret is stored <span className="text-white/70 font-medium">only on this device</span>. If you lose it, you <span className="text-orange-400 font-medium">cannot reveal</span> and your stake will be claimable by your opponent.
+            {secretBackup.rich("description", {
+              onDevice: (chunks) => <span className="text-white/70 font-medium">{chunks}</span>,
+              cannotReveal: (chunks) => <span className="text-orange-400 font-medium">{chunks}</span>,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -83,7 +88,7 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
               : "border-[#FCFF52]/40 bg-[#FCFF52]/10 text-[#FCFF52]"
           }`}
         >
-          {copied ? "✓ Copied to clipboard" : "Copy secret"}
+          {copied ? secretBackup("copied") : secretBackup("copy_secret")}
         </button>
 
         {/* Confirmation checkbox */}
@@ -95,7 +100,7 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
             className="mt-0.5 h-4 w-4 shrink-0 accent-green-400"
           />
           <span className="text-xs leading-relaxed text-white/60">
-            I have saved my secret in a safe place. I understand that without it I cannot reveal and may lose my stake.
+            {secretBackup("confirmation")}
           </span>
         </label>
 
@@ -107,7 +112,7 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
           className="rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-30 disabled:pointer-events-none"
           style={{ background: canDismiss ? "#FCFF52" : undefined, color: canDismiss ? "#0C0C0C" : undefined, border: canDismiss ? undefined : "1px solid rgba(255,255,255,0.1)" }}
         >
-          {canDismiss ? "Got it — start the game" : "Copy and confirm above to continue"}
+          {canDismiss ? secretBackup("got_it") : secretBackup("copy_confirm")}
         </button>
       </DialogContent>
     </Dialog>

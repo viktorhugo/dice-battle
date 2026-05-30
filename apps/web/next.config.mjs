@@ -1,4 +1,7 @@
 import path from 'path'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 // Domains added here allow webpack HMR (hot reload) through a tunnel.
 // Set TUNNEL_HOST=your-domain.tunnelmole.net (or ngrok domain) in .env.local
@@ -45,4 +48,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

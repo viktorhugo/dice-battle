@@ -15,7 +15,8 @@ import { getTokenIcon } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
-import { CheckCheck, Rocket } from "lucide-react";
+import { ArrowBigLeftDash, CheckCheck, Rocket } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const GRID_COLS: Record<number, string> = {
   1: "grid-cols-1",
@@ -48,6 +49,8 @@ export default function CreateRoomPage() {
   const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
+  const create = useTranslations("create");
+  const common = useTranslations("common");
 
   const [token, setToken] = useState<TokenKey>("USDm");
   const [stake, setStake] = useState("1");
@@ -262,17 +265,17 @@ export default function CreateRoomPage() {
       )}
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-          ← Back
+        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+          <ArrowBigLeftDash /> {common("back")}
         </Link>
-        <h1 className="text-lg font-semibold">Create room</h1>
+        <h1 className="text-lg font-semibold">{create("title")}</h1>
         <div className="w-10" />
       </header>
 
       {/* Token selector */}
       <section className="flex flex-col gap-2">
         <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-          Token
+          {create("token")}
         </label>
         <div className={`grid ${GRID_COLS[TOKEN_KEYS.length] ?? "grid-cols-2"} gap-2`}>
           {TOKEN_KEYS.map((key) => {
@@ -283,15 +286,15 @@ export default function CreateRoomPage() {
                 key={key}
                 type="button"
                 onClick={() => setToken(key)}
-                className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors ${
-                  isActive ? activeCls : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                className={`flex items-center justify-center gap-2 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
+                  isActive ? activeCls : "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
                 }`}
               >
                 <Image
                   src={getTokenIcon(getTokenAddress(key))}
                   alt={key}
-                  width={18}
-                  height={18}
+                  width={22}
+                  height={22}
                   className="rounded-full"
                 />
                 {key}
@@ -304,7 +307,7 @@ export default function CreateRoomPage() {
       {/* Stake selector */}
       <section className="flex flex-col gap-2">
         <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-          Stake
+          {create("stake")}
         </label>
         <div className="grid grid-cols-4 gap-2">
           {STAKE_PRESETS.map((preset) => (
@@ -312,10 +315,10 @@ export default function CreateRoomPage() {
               key={preset.value}
               type="button"
               onClick={() => setStake(preset.value)}
-              className={`rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+              className={`rounded-xl border-2 py-2.5 text-sm font-semibold transition-colors ${
                 stake === preset.value
                   ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
-                  : "border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300"
+                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
               }`}
             >
               {preset.label}
@@ -329,8 +332,8 @@ export default function CreateRoomPage() {
           min="0.01"
           value={stake}
           onChange={(e) => setStake(e.target.value)}
-          className="mt-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-celo-yellow focus:outline-none transition-colors"
-          placeholder="Custom amount"
+          className="mt-1 rounded-xl border-2 border-zinc-800 bg-zinc-900/60 px-4 py-3 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-celo-yellow focus:outline-none transition-colors"
+          placeholder={create("custom_amount")}
         />
       </section>
 
@@ -347,50 +350,48 @@ export default function CreateRoomPage() {
         />
         <div className="relative flex flex-col gap-2 text-sm">
           <div className="flex justify-between items-center">
-            <span className="text-zinc-500">Your balance</span>
+            <span className="text-zinc-400">{create("your_balance")}</span>
             <span className={`font-mono text-sm font-semibold ${hasInsufficientBalance ? "text-red-400" : "text-zinc-300"}`}>
               {balanceFormatted != null
                 ? `${parseFloat(balanceFormatted).toFixed(2)} ${token}`
                 : <span className="text-zinc-600">…</span>
               }
-              {hasInsufficientBalance && <span className="ml-1.5 text-[10px]">⚠ insufficient</span>}
+              {hasInsufficientBalance && <span className="ml-1.5 text-[10px]">{create("insufficient")}</span>}
             </span>
           </div>
           <div className="border-t border-zinc-800/60" />
           <div className="flex justify-between">
-            <span className="text-zinc-500">Your stake</span>
+            <span className="text-zinc-400">{create("your_stake")}</span>
             <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-zinc-500">Opponent matches</span>
+            <span className="text-zinc-400">{create("opponent_matches")}</span>
             <span className="font-mono text-zinc-300">{stake || "0"} {token}</span>
           </div>
           <div className="mt-1 flex justify-between border-t border-zinc-800 pt-2.5 font-semibold">
-            <span className="text-zinc-400 ml-16">If you win</span>
+            <span className="text-zinc-400 ml-16">{create("if_you_win")}</span>
             <span className="font-mono text-green-400 ">
               ~{stakeValid ? (Number(stake) * 1.96).toFixed(2) : "0.00"} {token}
             </span>
           </div>
-          <p className="text-[10px] text-zinc-600 ml-16">Protocol fee: 2% of pot</p>
+          <p className="text-[10px] text-amber-400/70 ml-16">{create("protocol_fee")}</p>
         </div>
       </section>
 
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+        <div className="rounded-xl border-2 border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
           {error}
         </div>
       )}
 
       {/* Allowance indicator */}
-      <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
+      <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-xs ${
         allowanceReady
           ? "border-green-500/20 bg-green-500/5 text-green-400"
-          : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
+          : "border-zinc-700 bg-zinc-900/60 text-zinc-400"
       }`}>
         <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
-        {allowanceReady
-          ? "Ready — 1 transaction to confirm"
-          : "Needs approval + create — 2 transactions"}
+        {allowanceReady ? create("ready") : create("needs_approval")}
       </div>
 
       {/* CTA */}
@@ -411,14 +412,14 @@ export default function CreateRoomPage() {
           >
             <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
             <span className="relative z-10 flex items-center gap-2">
-              {step === "approving" && <><Spinner /> Approving…</>}
-              {step === "creating" && <><Spinner /> Creating room…</>}
-              {step === "done" && <>Room created! <CheckCheck /></>}
+              {step === "approving" && <><Spinner /> {create("approving")}</>}
+              {step === "creating" && <><Spinner /> {create("creating")}</>}
+              {step === "done" && <>{create("room_created")} <CheckCheck /></>}
               {step === "idle" && (
-                !isConnected ? "Connect wallet"
-                : tokenDecimals == null ? "Loading…"
-                : hasInsufficientBalance ? `Insufficient ${token} — top up to continue`
-                : <><Rocket className="h-5 w-5" /> Create and stake</>
+                !isConnected ? common("connect_wallet")
+                : tokenDecimals == null ? common("loading")
+                : hasInsufficientBalance ? create("insufficient_top_up", { token })
+                : <><Rocket className="h-5 w-5" /> {create("create_and_stake")}</>
               )}
             </span>
           </button>

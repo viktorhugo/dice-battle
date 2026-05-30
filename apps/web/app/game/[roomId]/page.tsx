@@ -29,6 +29,7 @@ import { useAshes } from "@/hooks/useAshes";
 import { useTieClash } from "@/hooks/useTieClash";
 import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { logger } from "@/lib/logger";
+import { useTranslations } from "next-intl";
 
 const CELO_SECS_PER_BLOCK = 5;
 const REVEAL_WINDOW_BLOCKS = 17_280n; // 24 h on Celo Mainnet (5 s/block)
@@ -57,6 +58,7 @@ export default function GamePage() {
   const { address, isConnected } = useConnection();
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
+  const game = useTranslations("game");
 
   const [room, setRoom] = useState<Room | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -319,7 +321,7 @@ export default function GamePage() {
       {/* Header */}
       <header className="flex items-center justify-between pt-2">
         <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70">
-          ← Home
+          {game("back")}
         </Link>
         <h1 className="font-heading text-base font-semibold tracking-wide">
           Room <span style={{ color: "#FCFF52" }}>#{params.roomId}</span>
@@ -327,7 +329,7 @@ export default function GamePage() {
         {room.state === ROOM_STATE.MATCHED ? (
           <div className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="font-mono text-[9px] text-green-400 uppercase tracking-widest">Live</span>
+            <span className="font-mono text-[9px] text-green-400 uppercase tracking-widest">{game("live")}</span>
           </div>
         ) : (
           <div className="w-10" />
@@ -337,7 +339,7 @@ export default function GamePage() {
       {/* Created at row */}
       {createdAt && (
         <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
-          <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">Room created</span>
+          <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("room_created")}</span>
           <span className="font-mono text-xs text-white/50">
             {formatDate(createdAt)} <span className="text-white/30">({timeAgo(createdAt)})</span>
           </span>
@@ -370,18 +372,18 @@ export default function GamePage() {
               );
             })()}
             <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerA ? "border border-[#FCFF52]/30 bg-[#FCFF52]/10" : "invisible"}`} style={{ color: "#FCFF52" }}>
-              YOU
+              {game("you")}
             </span>
           </div>
 
-          <span className="font-heading text-lg font-bold text-white/20 mb-6">VS</span>
+          <span className="font-heading text-lg font-bold text-white/20 mb-6">{game("vs")}</span>
 
           {/* Guest side */}
           <div className="flex flex-col items-center gap-2">
             <DicePair roll1={result?.rollB1} roll2={result?.rollB2} label="GUEST" delay={200} />
             {hasGuest
               ? <span className="font-mono text-[9px] text-white/35">{guestDisplayName}</span>
-              : <span className="font-mono text-[9px] text-white/20">waiting…</span>
+              : <span className="font-mono text-[9px] text-white/20">{game("waiting")}</span>
             }
             {guestStats && (() => {
               const total = guestStats.wins + guestStats.losses + guestStats.ties;
@@ -397,7 +399,7 @@ export default function GamePage() {
               );
             })()}
             <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerB ? "border border-[#00C4B3]/30 bg-[#00C4B3]/10" : "invisible"}`} style={{ color: "#00C4B3" }}>
-              YOU
+              {game("you")}
             </span>
           </div>
         </div>
@@ -408,32 +410,32 @@ export default function GamePage() {
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center backdrop-blur-sm">
           {result.kind === "tie" && (
             <>
-              <p className="font-heading text-xl font-bold" style={{ color: "#FCFF52" }}>It&apos;s a tie!</p>
+              <p className="font-heading text-xl font-bold" style={{ color: "#FCFF52" }}>{game("its_tie")}</p>
               <p className="mt-1 font-mono text-sm text-white/70">
-                +{formatUnits(room.stake, tokenDecimals ?? 18)} {tokenSymbol} refunded
+                {game("refunded", { amount: formatUnits(room.stake, tokenDecimals ?? 18), token: tokenSymbol })}
               </p>
             </>
           )}
           {result.kind === "win" && youWon && (
             <>
-              <p className="font-heading text-2xl font-bold text-green-400">You won!</p>
+              <p className="font-heading text-2xl font-bold text-green-400">{game("you_won")}</p>
               <p className="mt-1 font-mono text-sm text-white/80">
-                +{formatUnits(result.payout || 0n, tokenDecimals ?? 18)} {tokenSymbol}
+                {game("you_won_payout", { amount: formatUnits(result.payout || 0n, tokenDecimals ?? 18), token: tokenSymbol })}
               </p>
             </>
           )}
           {result.kind === "win" && youLost && (
             <>
-              <p className="font-heading text-xl font-bold text-red-400">Better luck next time</p>
+              <p className="font-heading text-xl font-bold text-red-400">{game("better_luck")}</p>
               <p className="mt-1 text-xs text-white/50">
-                Opponent took {formatUnits(result.payout || 0n, tokenDecimals ?? 18)} {tokenSymbol}
+                {game("opponent_took", { amount: formatUnits(result.payout || 0n, tokenDecimals ?? 18), token: tokenSymbol })}
               </p>
             </>
           )}
           {result.kind === "expired" && (
             <>
-              <p className="font-heading text-xl font-bold text-white/70">Claimed as expired</p>
-              <p className="mt-1 text-xs text-white/40">Host did not reveal in time.</p>
+              <p className="font-heading text-xl font-bold text-white/70">{game("claimed_expired")}</p>
+              <p className="mt-1 text-xs text-white/40">{game("host_no_reveal")}</p>
             </>
           )}
         </section>
@@ -455,7 +457,7 @@ export default function GamePage() {
                 aria-hidden
               />
             )}
-            <p className="text-[10px] uppercase tracking-widest text-white/30 font-heading">Prize if you win</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/30 font-heading">{game("prize_if_win")}</p>
             <div className="mt-1.5 flex items-center gap-2">
               {tokenIcon && (
                 <Image src={tokenIcon} alt={tokenSymbol} width={20} height={20} className="rounded-full" />
@@ -470,7 +472,7 @@ export default function GamePage() {
           {/* Stake + room meta row */}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-0.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
-              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">Each stakes</span>
+              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("each_stakes")}</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {tokenIcon && (
                   <Image src={tokenIcon} alt={tokenSymbol} width={14} height={14} className="rounded-full" />
@@ -481,7 +483,7 @@ export default function GamePage() {
               </div>
             </div>
             <div className="flex flex-col gap-0.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
-              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">Matched at</span>
+              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("matched_at")}</span>
               <span className="font-mono text-sm font-semibold text-white/70 mt-0.5">
                 Block #{room.matchedAtBlock.toString()}
               </span>
@@ -494,7 +496,7 @@ export default function GamePage() {
       {/* Head-to-head */}
       {h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-mono">
-          <span className="text-white/30">vs opponent:</span>
+          <span className="text-white/30">{game("vs_opponent")}</span>
           <span className="text-green-400">{h2h.myWins}W</span>
           <span className="text-white/20">·</span>
           <span className="text-red-400">{h2h.theirWins}L</span>
@@ -517,17 +519,19 @@ export default function GamePage() {
                 <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
                 <span className="relative z-10 flex items-center gap-2">
                   {busy ? <Spinner className="h-4 w-4" /> : <Dices className="h-5 w-5" />}
-                  {busy ? "Rolling…" : "Reveal and roll"}
+                  {busy ? game("rolling") : game("reveal_and_roll")}
                 </span>
               </button>
               {canClaim && (
                 <p className="text-center text-xs text-red-400/80 font-mono">
-                  Claim window open — reveal now or opponent can claim your stake
+                  {game("claim_window")}
                 </p>
               )}
               {!canClaim && revealTimeLabel && (
                 <p className={`text-center text-xs font-mono ${blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? "text-orange-400/70" : "text-white/25"}`}>
-                  {blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? `⚠️ Only ${revealTimeLabel} left to reveal` : `${revealTimeLabel} left to reveal`}
+                  {blocksUntilExpiry !== null && blocksUntilExpiry < 720
+                    ? game("only_left", { time: revealTimeLabel })
+                    : game("time_left", { time: revealTimeLabel })}
                 </p>
               )}
             </>
@@ -537,18 +541,19 @@ export default function GamePage() {
             <div className="flex flex-col gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/8 p-4 backdrop-blur-sm">
               <div className="flex flex-col gap-1">
                 <p className="font-heading text-sm font-semibold text-orange-400">
-                  Secret not found on this device
+                  {game("secret_not_found_title")}
                 </p>
                 <p className="text-xs leading-relaxed text-orange-400/60">
-                  Your room was created on another device. Open that device, go to{" "}
-                  <span className="font-mono">My Rooms → Room #{params.roomId}</span> and copy your secret. Then paste it here.
+                  {game("secret_not_found_pre")}{" "}
+                  <span className="font-mono">{game("secret_not_found_code", { roomId: params.roomId })}</span>{" "}
+                  {game("secret_not_found_post")}
                 </p>
               </div>
 
               <input
                 type="text"
                 spellCheck={false}
-                placeholder="Paste your secret (0x…64 hex chars)"
+                placeholder={game("paste_secret_hint")}
                 value={manualSecret}
                 onChange={(e) => setManualSecret(e.target.value.trim())}
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/40 transition-colors"
@@ -574,7 +579,7 @@ export default function GamePage() {
                     <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
                     <span className="relative z-10 flex items-center gap-2">
                       {busy ? <Spinner className="h-4 w-4" /> : <Dices className="h-5 w-5" />}
-                      {busy ? "Rolling…" : isValid ? "Reveal and roll" : "Paste your secret above"}
+                      {busy ? game("rolling") : isValid ? game("reveal_and_roll") : game("paste_above")}
                     </span>
                   </button>
                 );
@@ -584,10 +589,10 @@ export default function GamePage() {
 
           {isPlayerB && !canClaim && (
             <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm">
-              <SoftBlurText text="Waiting for host to reveal…" className="text-sm text-white/50" loop />
+              <SoftBlurText text={game("waiting_host")} className="text-sm text-white/50" loop />
               {revealTimeLabel && (
                 <p className="text-[10px] font-mono text-white/25">
-                  Host has {revealTimeLabel} left — then you can claim
+                  {game("host_has_left", { time: revealTimeLabel })}
                 </p>
               )}
             </div>
@@ -600,7 +605,7 @@ export default function GamePage() {
               onClick={onClaimExpired}
               className="flex items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 py-4 text-sm font-semibold text-red-400 active:opacity-70 disabled:opacity-40 transition-opacity"
             >
-              {busy ? <><Spinner className="h-4 w-4" />Claiming…</> : "Claim — host didn't reveal in time"}
+              {busy ? <><Spinner className="h-4 w-4" />{game("claiming")}</> : game("claim_no_reveal")}
             </button>
           )}
         </section>
@@ -629,14 +634,14 @@ export default function GamePage() {
             }}
             className="flex-1 cursor-pointer rounded-2xl border border-white/10 bg-white/5 py-4 text-center font-heading text-sm font-semibold text-white/70 active:opacity-80 transition-opacity backdrop-blur-sm"
           >
-            {shared ? "✓ Copied!" : "Share result"}
+            {shared ? game("copied") : game("share_result")}
           </button>
           <Link
             href="/create"
             className="flex-1 cursor-pointer rounded-2xl py-4 text-center font-heading text-sm font-semibold text-[#0C0C0C] active:opacity-80 animate-btn-glow"
             style={{ background: "#FCFF52" }}
           >
-            Play again
+            {game("play_again")}
           </Link>
         </div>
       )}

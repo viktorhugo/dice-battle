@@ -12,6 +12,7 @@ import { getContractStats, type ContractStats } from "@/lib/indexer";
 import { getTokenSymbol, getTokenIcon, truncateAddress, timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { Copy, ExternalLink, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const EXPLORER_BASE =
   NETWORK === "celo" ? "https://celoscan.io" : "https://alfajores.celoscan.io";
@@ -24,17 +25,28 @@ type TokenBalance = {
   icon: string;
 };
 
-const STAT_ROWS = [
-  { key: "totalFinished" as const, label: "Total finished", color: "text-white" },
-  { key: "resolved" as const, label: "Resolved", color: "text-green-400" },
-  { key: "tied" as const, label: "Tied", color: "text-yellow-400" },
-  { key: "open" as const, label: "Open now", color: "text-[#00C4B3]" },
-  { key: "matched" as const, label: "Matched", color: "text-[#FCFF52]" },
-  { key: "expired" as const, label: "Expired", color: "text-red-400" },
-] as const;
+type StatKey = "totalFinished" | "resolved" | "tied" | "open" | "matched" | "expired";
+
+const STAT_ROWS: Array<{ key: StatKey; color: string }> = [
+  { key: "totalFinished", color: "text-white" },
+  { key: "resolved",      color: "text-green-400" },
+  { key: "tied",          color: "text-yellow-400" },
+  { key: "open",          color: "text-[#00C4B3]" },
+  { key: "matched",       color: "text-[#FCFF52]" },
+  { key: "expired",       color: "text-red-400" },
+];
 
 export default function StatsPage() {
   const publicClient = usePublicClient();
+  const statsI18n = useTranslations("stats");
+  const STAT_LABELS: Record<StatKey, string> = {
+    totalFinished: statsI18n("total_finished"),
+    resolved:      statsI18n("resolved"),
+    tied:          statsI18n("tied_stat"),
+    open:          statsI18n("open_now"),
+    matched:       statsI18n("matched"),
+    expired:       statsI18n("expired"),
+  };
   const [stats, setStats] = useState<ContractStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
@@ -102,9 +114,9 @@ export default function StatsPage() {
 
       <header className="flex items-center justify-between pt-2">
         <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70">
-          ← Home
+          {statsI18n("back")}
         </Link>
-        <h1 className="font-heading text-base font-semibold tracking-wide">Protocol Stats</h1>
+        <h1 className="font-heading text-base font-semibold tracking-wide">{statsI18n("title")}</h1>
         <div className="w-10" />
       </header>
 
@@ -119,10 +131,10 @@ export default function StatsPage() {
         <div className="relative flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
             <p className="text-[10px] uppercase tracking-widest text-white/70 font-heading">
-              Total Value Locked
+              {statsI18n("tvl")}
             </p>
             <p className="text-[10px] font-mono text-white/20">
-              Celo Mainnet · stablecoins only
+              {statsI18n("stablecoins_only")}
             </p>
           </div>
           <div className="flex flex-col items-end gap-0.5">
@@ -135,7 +147,7 @@ export default function StatsPage() {
                 </span>
                 <span className="flex items-center gap-1 text-[10px] text-white/30 font-mono">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-                  Live on-chain
+                  {statsI18n("live_onchain")}
                 </span>
               </>
             )}
@@ -147,7 +159,7 @@ export default function StatsPage() {
       {/* ── Contract address ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
         <p className="mb-2 text-[10px] uppercase tracking-widest text-white/25 font-heading">
-          Contract
+          {statsI18n("contract")}
         </p>
         <div className="flex items-center justify-between gap-2">
           <span className="break-all font-mono text-xs text-white/70">{GAME_ADDRESS}</span>
@@ -173,14 +185,14 @@ export default function StatsPage() {
           </div>
         </div>
         <p className="mt-2 font-mono text-[10px] text-white/20">
-          {NETWORK === "celo" ? "Celo Mainnet · Chain ID 42220" : "Celo Sepolia Testnet"}
+          {NETWORK === "celo" ? statsI18n("celo_mainnet") : statsI18n("celo_testnet")}
         </p>
       </div>
 
       {/* ── Locked in contract (on-chain, live) ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
         <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
-          Locked in contract (live)
+          {statsI18n("locked_in_contract")}
         </p>
         {balancesLoading ? (
           <div className="grid grid-cols-4 gap-2">
@@ -230,7 +242,7 @@ export default function StatsPage() {
       {/* ── All-time stats (indexer) ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
         <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
-          All-time
+          {statsI18n("all_time")}
         </p>
         {statsLoading ? (
           <div className="grid grid-cols-3 gap-2">
@@ -243,7 +255,7 @@ export default function StatsPage() {
           </div>
         ) : stats ? (
           <div className="grid grid-cols-3 gap-2">
-            {STAT_ROWS.map(({ key, label, color }) => (
+            {STAT_ROWS.map(({ key, color }) => (
               <div
                 key={key}
                 className="flex flex-col gap-0.5 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2"
@@ -251,12 +263,12 @@ export default function StatsPage() {
                 <span className={`font-mono text-xl font-bold tabular-nums ${color}`}>
                   {stats[key]}
                 </span>
-                <span className="text-[9px] leading-tight text-white/30">{label}</span>
+                <span className="text-[9px] leading-tight text-white/30">{STAT_LABELS[key]}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-center text-xs text-white/30">Could not load stats.</p>
+          <p className="text-center text-xs text-white/30">{statsI18n("could_not_load")}</p>
         )}
       </div>
 
@@ -264,7 +276,7 @@ export default function StatsPage() {
       {!statsLoading && stats && Object.keys(stats.volumeByToken).length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
           <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
-            Total volume wagered
+            {statsI18n("total_volume")}
           </p>
           <div className="flex flex-col gap-2">
             {Object.entries(stats.volumeByToken).map(([tokenAddr, amount]) => {
@@ -300,7 +312,7 @@ export default function StatsPage() {
       {!statsLoading && stats && stats.recentGames.length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
           <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
-            Recent activity
+            {statsI18n("recent_activity")}
           </p>
           <ul className="flex flex-col gap-1.5">
             {stats.recentGames.map((game) => {
@@ -320,14 +332,14 @@ export default function StatsPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       {isTie ? (
-                        <span className="text-[11px] text-yellow-400">Tie</span>
+                        <span className="text-[11px] text-yellow-400">{statsI18n("tie")}</span>
                       ) : (
                         <span className="font-mono text-[11px] text-white/60 truncate">
                           {truncateAddress(game.winner ?? game.playerA)}
                         </span>
                       )}
                       <span className="ml-1.5 text-[11px] text-white/30">
-                        {isTie ? "— refunded" : "won"}
+                        {isTie ? statsI18n("refunded") : statsI18n("won")}
                       </span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -350,7 +362,7 @@ export default function StatsPage() {
             rel="noopener noreferrer"
             className="mt-3 flex items-center justify-center gap-1 text-[10px] text-white/25 transition-colors hover:text-white/50"
           >
-            View all on CeloScan <ExternalLink className="h-2.5 w-2.5" />
+            {statsI18n("view_all_celoscan")} <ExternalLink className="h-2.5 w-2.5" />
           </a>
         </div>
       )}

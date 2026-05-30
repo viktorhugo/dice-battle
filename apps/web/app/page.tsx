@@ -2,31 +2,35 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarChart2, Trophy } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const TRUST_BADGES = [
-  { label: "Provably Fair",  Icon: ShieldCheck,      accent: "#00C4B3" },
-  { label: "Fully On-Chain", Icon: Blocks,           accent: "#FCFF52" },
-  { label: "Instant Payouts",Icon: BanknoteArrowUp,  accent: "#00C4B3" },
-  { label: "Built on Celo",  Icon: Globe,            accent: "#FCFF52" },
-];
+export default async function Home() {
+  const home = await getTranslations("home");
+  const common = await getTranslations("common");
 
-const HOW_IT_WORKS = [
-  { n: "01", title: "Create & Stake",   desc: "Set your bet in USDm or USDT and open a room.",                          accent: "#FCFF52" },
-  { n: "02", title: "Opponent Joins",   desc: "Share the link — they match your stake to lock in.",                      accent: "#00C4B3" },
-  { n: "03", title: "Roll On-Chain",    desc: "Reveal your secret. The contract generates entropy onchain.",             accent: "#FCFF52" },
-  { n: "04", title: "Winner Takes Pot", desc: "Higher roll wins. Ties refund both players. 2% protocol fee.",            accent: "#00C4B3" },
-] as const;
+  const TRUST_BADGES = [
+    { label: home("trust_provably_fair"),   Icon: ShieldCheck,      accent: "#00C4B3" },
+    { label: home("trust_fully_onchain"),   Icon: Blocks,           accent: "#FCFF52" },
+    { label: home("trust_instant_payouts"), Icon: BanknoteArrowUp,  accent: "#00C4B3" },
+    { label: home("trust_built_on_celo"),   Icon: Globe,            accent: "#FCFF52" },
+  ];
 
-export default function Home() {
+  const HOW_IT_WORKS = [
+    { n: "01", title: home("step_01_title"), desc: home("step_01_desc"), accent: "#FCFF52" },
+    { n: "02", title: home("step_02_title"), desc: home("step_02_desc"), accent: "#00C4B3" },
+    { n: "03", title: home("step_03_title"), desc: home("step_03_desc"), accent: "#FCFF52" },
+    { n: "04", title: home("step_04_title"), desc: home("step_04_desc"), accent: "#00C4B3" },
+  ];
+
   return (
     <div className="flex flex-col gap-5 pb-10">
       <WalletBar />
 
       {/* ── Hero ── */}
-      <header className="relative flex flex-col items-center gap-5 text-center overflow-hidden" style={{ borderRadius: "100px 1px 100px 40px" }}>
+      <header className="relative flex flex-col items-center gap-5 text-center overflow-hidden [mask-image:linear-gradient(to_bottom,transparent_0%,black_20%)]">
         {/* Glow amarillo detrás dado izquierdo */}
         <div
           aria-hidden
@@ -50,8 +54,8 @@ export default function Home() {
             priority
             className="mx-auto w-full object-contain mix-blend-screen"
             style={{
-              maskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
-              WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
+              // maskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
+              // WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
             }}
           />
         </div>
@@ -63,12 +67,12 @@ export default function Home() {
             <span className="text-white"> Battle</span>
           </h1>
 
-          <p className="font-heading text-base font-semibold tracking-widest text-white/70">
-            Roll.&nbsp; Risk.&nbsp; Win.
+          <p className="font-heading text-base font-semibold tracking-widest text-white/80">
+            {home("tagline")}
           </p>
 
-          <p className="mx-auto mt-1.5 max-w-[250px] text-[13px] leading-relaxed text-white/35">
-            Stake stablecoins, roll on-chain, winner takes the pot.
+          <p className="mx-auto mt-1.5 max-w-[250px] text-[13px] leading-relaxed text-white/60">
+            {home("description")}
           </p>
         </div>
       </header>
@@ -79,7 +83,7 @@ export default function Home() {
           {[...TRUST_BADGES, ...TRUST_BADGES].map(({ label, Icon, accent }, i) => (
             <span
               key={i}
-              className="shrink-0 flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[10px] text-white/50 backdrop-blur-sm"
+              className="shrink-0 flex items-center gap-1.5 rounded-full border-2 border-white/10 bg-white/5 px-3 py-1.5 font-mono text-[10px] text-white/70 backdrop-blur-sm"
             >
               <Icon className="h-2.5 w-2.5 shrink-0" style={{ color: accent }} />
               {label}
@@ -91,7 +95,7 @@ export default function Home() {
       {/* ── Live Stats ── */}
       <Suspense
         fallback={
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border-2 border-white/10 bg-white/5 p-4 backdrop-blur-sm">
             {[0, 1, 2].map((i) => (
               <div key={i} className="flex flex-col items-center gap-2">
                 <Skeleton className="h-4 w-10" />
@@ -101,9 +105,9 @@ export default function Home() {
           </div>
         }
       >
-      
+
       <LiveStats />
-      
+
       </Suspense>
 
       {/* ── CTA Bento Grid ── */}
@@ -116,7 +120,7 @@ export default function Home() {
         >
           <span className="relative z-10 flex items-center justify-center gap-2 font-heading text-[15px] font-semibold">
             <Zap className="h-5 w-5 fill-current" />
-            Create a Room
+            {home("create_room")}
           </span>
           <span
             aria-hidden
@@ -127,37 +131,37 @@ export default function Home() {
         {/* Browse Rooms */}
         <Link
           href="/rooms"
-          className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#00C4B3]/40"
+          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#00C4B3]/40"
         >
           <span className="flex flex-col items-center gap-2">
             <Search className="h-5 w-5" style={{ color: "#00C4B3" }} />
-            <span className="font-heading text-sm font-semibold text-white">Browse Rooms</span>
+            <span className="font-heading text-sm font-semibold text-white">{home("browse_rooms")}</span>
           </span>
         </Link>
 
         {/* Leaderboard */}
         <Link
           href="/leaderboard"
-          className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/40"
+          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/40"
         >
           <span className="flex flex-col items-center gap-2">
             <Medal className="h-5 w-5" style={{ color: "#FCFF52" }} />
-            <span className="font-heading text-sm font-semibold text-white">Leaderboard</span>
+            <span className="font-heading text-sm font-semibold text-white">{home("leaderboard")}</span>
           </span>
         </Link>
 
-        {/* Daily Tournament */}
+        {/* Weekly Tournament */}
         <Link
           href="/tournament"
-          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border border-yellow-500/25 bg-gradient-to-r from-yellow-500/8 to-yellow-400/4 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-yellow-500/40 hover:from-yellow-500/12 hover:to-yellow-400/8"
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-yellow-500/25 bg-gradient-to-r from-yellow-500/8 to-yellow-400/4 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-yellow-500/40 hover:from-yellow-500/12 hover:to-yellow-400/8"
         >
           <span className="flex items-center justify-center gap-2">
             <Trophy className="h-4 w-4 text-yellow-400 transition-colors group-hover:text-yellow-300" />
             <span className="font-heading text-sm font-semibold text-white/75 transition-colors group-hover:text-white/90">
-              Weekly Tournament
+              {home("weekly_tournament")}
             </span>
-            <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
-              Prize pool
+            <span className="rounded-full border-2 border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
+              {home("prize_pool")}
             </span>
           </span>
         </Link>
@@ -165,12 +169,12 @@ export default function Home() {
         {/* Protocol Stats */}
         <Link
           href="/stats"
-          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border border-[#FCFF52]/20 bg-gradient-to-r from-[#FCFF52]/5 to-[#00C4B3]/5 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/35 hover:from-[#FCFF52]/10 hover:to-[#00C4B3]/10"
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-[#FCFF52]/20 bg-gradient-to-r from-[#FCFF52]/5 to-[#00C4B3]/5 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/35 hover:from-[#FCFF52]/10 hover:to-[#00C4B3]/10"
         >
           <span className="flex items-center justify-center gap-2">
             <BarChart2 className="h-4 w-4 transition-colors" style={{ color: "#FCFF52" }} />
             <span className="font-heading text-sm font-semibold text-white/65 transition-colors group-hover:text-white/85">
-              Protocol Stats
+              {home("protocol_stats")}
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
           </span>
@@ -178,9 +182,9 @@ export default function Home() {
       </div>
 
       {/* ── How it works ── */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+      <section className="rounded-2xl border-2 border-white/10 bg-white/5 p-5 backdrop-blur-sm">
         <h2 className="mb-5 font-heading text-[10px] font-bold uppercase tracking-widest text-white/30">
-          How it works
+          {home("how_it_works")}
         </h2>
 
         <div className="space-y-5">
@@ -200,7 +204,7 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <footer className="pt-2 text-center font-mono text-[10px] text-white/20">
-        Built for MiniPay on Celo · Proof of Ship 2026
+        {common("footer")}
       </footer>
     </div>
   );

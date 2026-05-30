@@ -4,6 +4,8 @@ import "./globals.css";
 import ContextProvider from "./context/wagmi-provider";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const spaceGrotesk = Space_Grotesk({
@@ -34,9 +36,11 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersObj = await headers();
   const cookies = headersObj.get("cookie");
+  const locale = await getLocale();
+  const messages = await getMessages();
 
   return (
-    <html lang="es" suppressHydrationWarning className={cn("font-sans", inter.variable, spaceGrotesk.variable)}>
+    <html lang={locale} suppressHydrationWarning className={cn("font-sans", inter.variable, spaceGrotesk.variable)}>
       <head>
         <meta
           name="talentapp:project_verification"
@@ -45,7 +49,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body suppressHydrationWarning>
         <ContextProvider cookies={cookies}>
-          <main className="min-h-screen mx-auto max-w-md px-4 py-6">{children}</main>
+          <NextIntlClientProvider locale={locale} messages={messages}>
+            <main className="min-h-screen mx-auto max-w-md px-4 py-6">{children}</main>
+          </NextIntlClientProvider>
         </ContextProvider>
       </body>
     </html>

@@ -4,14 +4,27 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { useAppKit } from "@reown/appkit/react";
 import { useChainId, useSwitchChain } from "wagmi";
+import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useMiniPay } from "@/hooks/useMiniPay";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHAIN_ID, NETWORK } from "@/lib/constants";
 import { NETWORK_LABEL } from "@/lib/utils";
 import { useDisplayName } from "@/hooks/useDisplayName";
+import { setLocaleCookie } from "@/app/actions/locale";
 
-function ConnectButton({ address, isConnected, displayName }: { address?: string; isConnected: boolean; displayName: string }) {
+function ConnectButton({
+  address,
+  isConnected,
+  displayName,
+  enterArenaLabel,
+}: {
+  address?: string;
+  isConnected: boolean;
+  displayName: string;
+  enterArenaLabel: string;
+}) {
   const { open } = useAppKit();
   return (
     <button
@@ -26,7 +39,7 @@ function ConnectButton({ address, isConnected, displayName }: { address?: string
 
       <Wallet className="relative z-10 h-3.5 w-3.5 shrink-0" />
       <span className="relative z-10">
-        {isConnected && address ? displayName : "Enter Arena"}
+        {isConnected && address ? displayName : enterArenaLabel}
       </span>
     </button>
   );
@@ -37,8 +50,17 @@ export function WalletBar() {
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const displayName = useDisplayName(address);
+  const locale = useLocale();
+  const walletbar = useTranslations("walletbar");
+  const router = useRouter();
 
   const isWrongNetwork = isConnected && checked && chainId !== CHAIN_ID;
+  const networkLabel = NETWORK_LABEL[NETWORK] ?? "Celo";
+
+  async function toggleLocale() {
+    await setLocaleCookie(locale === "es" ? "en" : "es");
+    router.refresh();
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -54,7 +76,12 @@ export function WalletBar() {
           )}
 
           {checked && !isMiniPay && (
-            <ConnectButton address={address} isConnected={isConnected} displayName={displayName} />
+            <ConnectButton
+              address={address}
+              isConnected={isConnected}
+              displayName={displayName}
+              enterArenaLabel={walletbar("enter_arena")}
+            />
           )}
 
           {checked && isConnected && address && (
@@ -67,7 +94,17 @@ export function WalletBar() {
             </Link>
           )}
         </div>
-        <span className="text-white/40">{NETWORK_LABEL[NETWORK] ?? "Celo"}</span>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/40 hover:border-white/25 hover:text-white/70 transition-colors"
+          >
+            {locale === "es" ? "EN" : "ES"}
+          </button>
+          <span className="text-white/40">{networkLabel}</span>
+        </div>
       </div>
 
       {isWrongNetwork && (
@@ -76,7 +113,7 @@ export function WalletBar() {
           onClick={() => switchChain({ chainId: CHAIN_ID })}
           className="w-full rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-left text-xs text-orange-400 active:opacity-70"
         >
-          ⚠️ Wrong network — tap to switch to {NETWORK_LABEL[NETWORK]}
+          {walletbar("wrong_network", { network: networkLabel })}
         </button>
       )}
     </div>

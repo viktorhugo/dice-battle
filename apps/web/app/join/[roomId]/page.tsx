@@ -23,11 +23,12 @@ import { useDisplayName } from "@/hooks/useDisplayName";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
 import { LightRays } from "@/components/ui/light-rays";
-import { CircleSlash } from "lucide-react";
+import { ArrowBigLeftDash, CircleSlash } from "lucide-react";
 import { FloatingToast } from "@/components/ui/floating-toast";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
 import { loadSecret } from "@/lib/commitment";
 import { storeJoinedRoom } from "@/lib/joinedRooms";
+import { useTranslations } from "next-intl";
 
 type Room = {
   playerA: `0x${string}`;
@@ -42,6 +43,8 @@ export default function JoinRoomPage() {
   const params = useParams<{ roomId: string }>();
   const router = useRouter();
   const { address, isConnected } = useConnection();
+  const join = useTranslations("join");
+  const common = useTranslations("common");
   const publicClient = usePublicClient();
   const { mutateAsync: writeContractAsync } = useWriteContract();
 
@@ -344,9 +347,11 @@ export default function JoinRoomPage() {
     return (
       <div className="flex flex-col gap-4">
         <WalletBar />
-        <Link href="/" className="pt-2 text-sm text-white/60">← Back</Link>
+        <Link href="/" className="pt-2 text-sm text-white/60 flex items-center gap-1">
+          <ArrowBigLeftDash /> {common("back")}
+        </Link>
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
-          Room #{params.roomId} does not exist.
+          {join("room_not_exist", { id: params.roomId })}
         </div>
       </div>
     );
@@ -381,7 +386,9 @@ export default function JoinRoomPage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/rooms" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">← Back</Link>
+        <Link href="/rooms" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
+          <ArrowBigLeftDash /> {common("back")}
+        </Link>
         <h1 className="text-lg font-semibold">Room #{params.roomId}</h1>
         <div className="w-10" />
       </header>
@@ -407,7 +414,7 @@ export default function JoinRoomPage() {
           
           {/* Host */}
           <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wider text-zinc-400">Host</span>
+            <span className="text-[11px] uppercase tracking-wider text-zinc-400">{join("host")}</span>
             <p className="text-sm">
               <span className="font-mono text-zinc-200">{hostDisplayName}</span>
             </p>
@@ -444,7 +451,7 @@ export default function JoinRoomPage() {
 
           {/* Prize */}
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-zinc-400">Prize if you win</span>
+            <span className="text-xs text-zinc-400">{join("prize_if_win")}</span>
             <span className="font-mono text-sm font-semibold text-green-300">
               ~{tokenDecimals != null
                 ? (Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)
@@ -456,7 +463,7 @@ export default function JoinRoomPage() {
           {/* Created */}
           {createdAt && (
             <div className="flex items-baseline justify-between">
-              <span className="text-xs text-zinc-400">Created</span>
+              <span className="text-xs text-zinc-400">{join("created")}</span>
               <span className="text-xs text-zinc-300">{formatDate(createdAt)} <span className="text-zinc-500">({timeAgo(createdAt)})</span></span>
             </div>
           )}
@@ -466,7 +473,7 @@ export default function JoinRoomPage() {
       {/* Head-to-head */}
       {!isPlayerA && h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2.5 text-xs">
-          <span className="text-zinc-500">vs this host</span>
+          <span className="text-zinc-500">{join("vs_host")}</span>
           <span className="ml-auto text-green-400">{h2h.myWins}W</span>
           <span className="text-zinc-700">·</span>
           <span className="text-red-400">{h2h.theirWins}L</span>
@@ -482,15 +489,15 @@ export default function JoinRoomPage() {
       {/* Player A — waiting for opponent */}
       {room.state === ROOM_STATE.OPEN && isPlayerA && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 flex flex-col gap-3">
-          <p className="text-sm text-zinc-300">You created this room. Share the link to challenge your opponent.</p>
+          <p className="text-sm text-zinc-300">{join("you_created")}</p>
           <SoftBlurText
-            text="Waiting for someone to join…"
+            text={join("waiting_join")}
             className="text-sm text-center text-yellow-600 block"
             loop
           />
           {cancelSuccess ? (
             <SoftBlurText
-              text="Redirecting to home…"
+              text={join("redirecting")}
               className="text-xs text-center text-zinc-500 block"
             />
           ) : (
@@ -500,7 +507,7 @@ export default function JoinRoomPage() {
                 onClick={() => navigator.clipboard?.writeText(window.location.href)}
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 active:opacity-70 transition-opacity"
               >
-                Copy invite link
+                {join("copy_invite")}
               </button>
               <button
                 type="button"
@@ -509,8 +516,8 @@ export default function JoinRoomPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/5 py-2.5 text-xs font-medium text-red-400 active:opacity-70 disabled:opacity-40 transition-opacity"
               >
                 {busy
-                  ? <><Spinner /> Cancelling…</>
-                  : <><CircleSlash className="h-3.5 w-3.5" /> Cancel room — recover stake</>}
+                  ? <><Spinner /> {join("cancelling")}</>
+                  : <><CircleSlash className="h-3.5 w-3.5" /> {join("cancel_room")}</>}
               </button>
             </>
           )}
@@ -530,7 +537,7 @@ export default function JoinRoomPage() {
           {hasInsufficientBalance ? (
             <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/8 px-3 py-2.5 text-xs text-red-400">
               <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-400" />
-              Insufficient balance — you have {balanceFormatted} {tokenSymbol}
+              {join("insufficient_balance", { balance: balanceFormatted ?? "…", token: tokenSymbol })}
             </div>
           ) : (
             <div className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs ${
@@ -539,7 +546,7 @@ export default function JoinRoomPage() {
                 : "border-zinc-800 bg-zinc-900/60 text-zinc-500"
             }`}>
               <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${allowanceReady ? "bg-green-400" : "bg-zinc-600"}`} />
-              {allowanceReady ? "Ready — 1 transaction to confirm" : "Needs approval + join — 2 transactions"}
+              {allowanceReady ? join("ready_1tx") : join("needs_2tx")}
             </div>
           )}
 
@@ -554,10 +561,10 @@ export default function JoinRoomPage() {
             }`}
           >
             {busy
-              ? <><Spinner /> Joining…</>
+              ? <><Spinner /> {join("joining")}</>
               : hasInsufficientBalance
-                ? `Insufficient ${tokenSymbol} — top up to continue`
-                : `Match ${tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…"} ${tokenSymbol}`}
+                ? join("insufficient_token", { token: tokenSymbol })
+                : join("match_stake", { amount: tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…", symbol: tokenSymbol })}
           </button>
         </>
       )}
@@ -568,11 +575,11 @@ export default function JoinRoomPage() {
           href={`/game/${params.roomId}`}
           className="rounded-2xl bg-celo-yellow py-4 text-center font-semibold text-celo-dark active:opacity-80"
         >
-          Go to game →
+          {join("go_to_game")}
         </Link>
       )}
 
-      <FloatingToast show={cancelSuccess} message="Room cancelled — stake recovered" />
+      <FloatingToast show={cancelSuccess} message={join("room_cancelled")} />
 
       {/* Resolved / expired */}
       {(room.state === ROOM_STATE.RESOLVED || room.state === ROOM_STATE.EXPIRED) && (
@@ -580,15 +587,15 @@ export default function JoinRoomPage() {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-center">
             <p className="text-sm text-zinc-400">
               {room.state === ROOM_STATE.RESOLVED
-                ? "This game has already been resolved."
-                : "This game expired — host never revealed."}
+                ? join("already_resolved")
+                : join("already_expired")}
             </p>
             {(isPlayerA || isPlayerB) && (
               <Link
                 href={`/game/${params.roomId}`}
                 className="mt-2 inline-block text-xs text-celo-yellow underline"
               >
-                View result →
+                {join("view_result")}
               </Link>
             )}
           </div>
@@ -596,7 +603,7 @@ export default function JoinRoomPage() {
             href="/create"
             className="rounded-2xl border border-zinc-700 py-4 text-center font-semibold text-zinc-300 active:opacity-80"
           >
-            Create a new room
+            {join("create_new_room")}
           </Link>
         </div>
       )}

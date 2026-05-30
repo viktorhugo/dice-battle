@@ -15,20 +15,10 @@ import {
   type SortKey,
 } from "@/lib/indexer";
 import { logger } from "@/lib/logger";
+import { ArrowBigLeftDash } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const TABS: { key: LeaderboardTab; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "alltime", label: "All-time" },
-];
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "wins", label: "Wins" },
-  { key: "winRate", label: "Win Rate" },
-  { key: "volume", label: "Volume" },
-];
 
 const MEDAL: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 
@@ -125,6 +115,21 @@ function LeaderboardRow({
 
 export default function LeaderboardPage() {
   const searchParams = useSearchParams();
+  const leaderboard = useTranslations("leaderboard");
+  const common = useTranslations("common");
+
+  const TABS: { key: LeaderboardTab; label: string }[] = [
+    { key: "today",   label: leaderboard("tab_today") },
+    { key: "week",    label: leaderboard("tab_week") },
+    { key: "alltime", label: leaderboard("tab_alltime") },
+  ];
+
+  const SORTS: { key: SortKey; label: string }[] = [
+    { key: "wins",    label: leaderboard("sort_wins") },
+    { key: "winRate", label: leaderboard("sort_winrate") },
+    { key: "volume",  label: leaderboard("sort_volume") },
+  ];
+
   const initialTab = (["today", "week", "alltime"].includes(searchParams.get("period") ?? "")
     ? searchParams.get("period")
     : "alltime") as LeaderboardTab;
@@ -165,8 +170,10 @@ export default function LeaderboardPage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">← Back</Link>
-        <h1 className="text-lg font-semibold">Leaderboard</h1>
+        <Link href="/" className="text-sm text-white/60 flex items-center gap-1">
+          <ArrowBigLeftDash /> {common("back")}
+        </Link>
+        <h1 className="text-lg font-semibold">{leaderboard("title")}</h1>
         <div className="w-10" />
       </header>
 
@@ -189,7 +196,7 @@ export default function LeaderboardPage() {
 
       {/* Sort selector */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-white/40">Sort:</span>
+        <span className="text-xs text-white/40">{leaderboard("sort")}</span>
         <div className="flex gap-1">
           {SORTS.map(({ key, label }) => (
             <button
@@ -218,7 +225,7 @@ export default function LeaderboardPage() {
         </div>
       ) : sorted.length === 0 ? (
         <p className="pt-10 text-center text-sm text-white/40">
-          No games in this period yet.
+          {leaderboard("no_games")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">

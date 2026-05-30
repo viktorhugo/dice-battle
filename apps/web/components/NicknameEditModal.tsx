@@ -7,6 +7,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { useSetNickname } from "@/hooks/useSetNickname";
+import { useTranslations } from "next-intl";
 
 const MAX_LEN = 20;
 
@@ -22,6 +23,7 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const { setNickname, isPending } = useSetNickname();
+  const nicknameModal = useTranslations("nicknameModal");
 
   function handleChange(v: string) {
     if (v.length <= MAX_LEN) {
@@ -32,7 +34,7 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
 
   async function handleSave() {
     const trimmed = name.trim();
-    if (!trimmed) { setError("Nickname cannot be empty"); return; }
+    if (!trimmed) { setError(nicknameModal("empty_error")); return; }
     try {
       const saved = await setNickname(trimmed);
       setSuccess(true);
@@ -42,7 +44,7 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
         onClose();
       }, 900);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to save";
+      const msg = e instanceof Error ? e.message : nicknameModal("failed_save");
       setError(msg);
     }
   }
@@ -57,8 +59,8 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
             <Tag className="h-4 w-4 text-[#FCFF52]" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-none">Set your nickname</p>
-            <p className="text-[10px] text-white/40 mt-0.5">Stored on-chain · visible everywhere</p>
+            <p className="text-sm font-bold text-white leading-none">{nicknameModal("title")}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">{nicknameModal("subtitle")}</p>
           </div>
           {/* decorative dots */}
           <span aria-hidden className="absolute right-4 top-3 h-1.5 w-1.5 rounded-full bg-[#FCFF52]/60 animate-ping" style={{ animationDuration: "2.4s" }} />
@@ -71,7 +73,7 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
             <input
               value={name}
               onChange={(e) => handleChange(e.target.value)}
-              placeholder="e.g. CryptoBeast"
+              placeholder={nicknameModal("placeholder")}
               maxLength={MAX_LEN}
               disabled={isPending}
               autoFocus
@@ -95,7 +97,7 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
               disabled={isPending}
               className="flex-1 py-2.5 rounded-xl text-sm border border-white/10 text-white/50 hover:text-white hover:border-white/20 transition-all disabled:opacity-40"
             >
-              Cancel
+              {nicknameModal("cancel")}
             </button>
             <button
               onClick={handleSave}
@@ -109,11 +111,11 @@ export function NicknameEditModal({ current, open, onClose, onSaved }: Props) {
               }}
             >
               {isPending ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
+                <><Loader2 className="h-4 w-4 animate-spin" /> {nicknameModal("saving")}</>
               ) : success ? (
-                <><Check className="h-4 w-4" /> Saved!</>
+                <><Check className="h-4 w-4" /> {nicknameModal("saved")}</>
               ) : (
-                "Save nickname →"
+                nicknameModal("save")
               )}
             </button>
           </div>

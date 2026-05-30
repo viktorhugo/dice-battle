@@ -7,6 +7,7 @@ import { useConnection } from "wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLiveStats, type LiveStats } from "@/lib/indexer";
 import { logger } from "@/lib/logger";
+import { useTranslations } from "next-intl";
 
 const FAST_POLL_MS = 2_000;
 const FAST_POLL_DURATION_MS = 10_000;
@@ -54,6 +55,7 @@ export function LiveStats() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { address } = useConnection();
+  const liveStats = useTranslations("liveStats");
 
   const cancelled = searchParams.get("cancelled") === "1";
 
@@ -91,7 +93,7 @@ export function LiveStats() {
 
   if (!stats) {
     return (
-      <div className={`grid ${cols} gap-2 rounded-xl border border-white/10 bg-white/5 p-3`}>
+      <div className={`grid ${cols} gap-2 rounded-xl border-2 border-white/10 bg-white/5 p-3`}>
         {Array.from({ length: showMatchedStat ? 4 : 3 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-1.5">
             <Skeleton className="h-4 w-8" />
@@ -103,29 +105,29 @@ export function LiveStats() {
   }
 
   return (
-    <div className={`grid ${cols} rounded-xl border border-white/10 bg-white/5`}>
+    <div className={`grid ${cols} rounded-xl border-2 border-white/10 bg-white/5`}>
       <StatItem
         value={Math.max(0, stats.openRooms + optimisticOffset)}
-        label="Open rooms"
+        label={liveStats("open_rooms")}
         href="/rooms"
-        className="border-r border-white/10 py-3"
+        className="border-r border-r-2 border-white/10 py-3"
       />
       {showMatchedStat && (
         <StatItem
           value={stats.matchedForMe ?? 0}
-          label="To reveal"
+          label={liveStats("to_reveal")}
           href="/rooms?tab=mine"
           highlight={(stats.matchedForMe ?? 0) > 0}
-          className="border-r border-white/10 py-3"
+          className="border-r  border-r-2 border-white/10 py-3"
         />
       )}
       <StatItem
         value={stats.gamesToday}
-        label="Played today"
+        label={liveStats("played_today")}
         href="/leaderboard?period=today"
-        className="border-r border-white/10 py-3"
+        className="border-r border-r-2 border-white/10 py-3"
       />
-      <StatItem value={stats.totalGames} label="All-time" href="/leaderboard" className="py-3" />
+      <StatItem value={stats.totalGames} label={liveStats("all_time")} href="/leaderboard" className="py-3" />
     </div>
   );
 }

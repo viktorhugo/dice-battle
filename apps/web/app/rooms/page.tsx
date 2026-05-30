@@ -22,11 +22,12 @@ import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } fr
 import Image from "next/image";
 import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, getMatchedRoomsAsGuest, type IndexerRoom } from "@/lib/indexer";
 import { clearSecret, loadSecret } from "@/lib/commitment";
-import { Zap, Copy, Check } from "lucide-react";
+import { Zap, Copy, Check, ArrowBigLeftDash } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { logger } from "@/lib/logger";
 import { ComicText } from '../../components/ui/comic-text';
 import { WordRotate } from "@/components/ui/word-rotate";
+import { useTranslations } from "next-intl";
 
 const PAGE_SIZE = 10;
 const SECRET_PREFIX = "dice-battle:secret:";
@@ -38,6 +39,18 @@ type ActiveRoom = {
   token?: string;
   stake?: bigint;
   createdAt?: number;
+};
+
+type SectionId = "action" | "watching" | "open";
+type SectionLabels = Record<SectionId, string>;
+type CardLabels = {
+  watch: string;
+  go: string;
+  roll: string;
+  view: string;
+  secretCopied: string;
+  copySecret: string;
+  each: string;
 };
 
 type Tab = "browse" | "mine";
@@ -74,10 +87,12 @@ function RoomCard({
   room,
   copiedRoomId,
   onCopy,
+  cardLabels,
 }: {
   room: ActiveRoom;
   copiedRoomId: string | null;
   onCopy: (id: string, secret: string) => void;
+  cardLabels: CardLabels;
 }) {
   const isMatched = room.state === ROOM_STATE.MATCHED;
   const isGuest = room.role === "guest";
@@ -101,7 +116,7 @@ function RoomCard({
         {room.token && room.stake != null && symbol && (
           <span className="text-xs mt-0.5 text-zinc-500 flex items-center gap-1.5 font-bold">
             <Image src={getTokenIcon(room.token)} alt={symbol} width={14} height={14} className="rounded-full" />
-            {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} each
+            {formatUnits(room.stake, getTokenDecimals(room.token as `0x${string}`))} {symbol} {cardLabels.each}
           </span>
         )}
         {room.createdAt && (
@@ -113,9 +128,9 @@ function RoomCard({
       <span className={`relative z-10 shrink-0 rounded-full bg-zinc-900/30 px-3 py-1 text-sm font-semibold backdrop-blur ${isMatched ? (isGuest ? "text-sky-400" : "text-amber-400") : "text-zinc-400"}`}>
         {isMatched
           ? (isGuest
-              ? "Watch →"
-              : <WordRotate className="text-sm font-bold text-amber dark:text-amber" words={["Go", "Roll →"]} />)
-          : "View →"
+              ? cardLabels.watch
+              : <WordRotate className="text-sm font-bold text-amber dark:text-amber" words={[cardLabels.go, cardLabels.roll]} />)
+          : cardLabels.view
         }
       </span>
     </>
@@ -143,8 +158,8 @@ function RoomCard({
           className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-1.5 text-[10px] font-mono text-white/30 transition-colors hover:text-white/60 active:opacity-70"
         >
           {copiedRoomId === room.id
-            ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Secret copied!</span></>
-            : <><Copy className="h-3 w-3" />Copy secret — use on other devices</>
+            ? <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">{cardLabels.secretCopied}</span></>
+            : <><Copy className="h-3 w-3" />{cardLabels.copySecret}</>
           }
         </button>
       )}
@@ -152,20 +167,29 @@ function RoomCard({
   );
 }
 
-const SECTIONS = [
-  { id: "action",   label: "Your turn", dot: "bg-amber-400",  text: "text-amber-400/80", filter: (r: ActiveRoom) => r.state === ROOM_STATE.MATCHED && !r.role },
-  { id: "watching", label: "Watching",  dot: "bg-sky-400",    text: "text-sky-400/80",   filter: (r: ActiveRoom) => r.state === ROOM_STATE.MATCHED && r.role === "guest" },
-  { id: "open",     label: "Open",      dot: "bg-zinc-500",   text: "text-zinc-500",     filter: (r: ActiveRoom) => r.state !== ROOM_STATE.MATCHED },
-] as const;
+const SECTIONS: Array<{
+  id: SectionId;
+  dot: string;
+  text: string;
+  filter: (r: ActiveRoom) => boolean;
+}> = [
+  { id: "action",   dot: "bg-amber-400",  text: "text-amber-400/80", filter: (r) => r.state === ROOM_STATE.MATCHED && !r.role },
+  { id: "watching", dot: "bg-sky-400",    text: "text-sky-400/80",   filter: (r) => r.state === ROOM_STATE.MATCHED && r.role === "guest" },
+  { id: "open",     dot: "bg-zinc-500",   text: "text-zinc-500",     filter: (r) => r.state !== ROOM_STATE.MATCHED },
+];
 
 function RoomSections({
   rooms,
   copiedRoomId,
   onCopy,
+  sectionLabels,
+  cardLabels,
 }: {
   rooms: ActiveRoom[];
   copiedRoomId: string | null;
   onCopy: (id: string, secret: string) => void;
+  sectionLabels: SectionLabels;
+  cardLabels: CardLabels;
 }) {
   const activeSections = SECTIONS.map(s => ({ ...s, rooms: rooms.filter(s.filter) })).filter(s => s.rooms.length > 0);
 
@@ -175,13 +199,13 @@ function RoomSections({
         <div key={section.id} className="flex flex-col gap-2">
           <div className="flex items-center gap-2 px-1">
             <span className={`h-1.5 w-1.5 rounded-full ${section.dot}`} />
-            <span className={`text-[10px] uppercase tracking-widest font-heading ${section.text}`}>{section.label}</span>
+            <span className={`text-[10px] uppercase tracking-widest font-heading ${section.text}`}>{sectionLabels[section.id]}</span>
             <div className="flex-1 h-px bg-white/5" />
             <span className="text-[10px] text-white/20">{section.rooms.length}</span>
           </div>
           <ul className="flex flex-col gap-3">
             {section.rooms.map(room => (
-              <RoomCard key={room.id} room={room} copiedRoomId={copiedRoomId} onCopy={onCopy} />
+              <RoomCard key={room.id} room={room} copiedRoomId={copiedRoomId} onCopy={onCopy} cardLabels={cardLabels} />
             ))}
           </ul>
         </div>
@@ -194,6 +218,22 @@ export default function RoomsPage() {
   const publicClient = usePublicClient();
   const { address, status } = useConnection();
   const searchParams = useSearchParams();
+  const roomsPage = useTranslations("rooms");
+
+  const sectionLabels: SectionLabels = {
+    action:   roomsPage("section_your_turn"),
+    watching: roomsPage("section_watching"),
+    open:     roomsPage("section_open"),
+  };
+  const cardLabels: CardLabels = {
+    watch:       roomsPage("watch"),
+    go:          roomsPage("go"),
+    roll:        roomsPage("roll"),
+    view:        roomsPage("view"),
+    secretCopied: roomsPage("secret_copied"),
+    copySecret:  roomsPage("copy_secret"),
+    each:        roomsPage("each"),
+  };
 
   const [tab, setTab] = useState<Tab>(
     searchParams.get("tab") === "mine" ? "mine" : "browse"
@@ -334,8 +374,10 @@ export default function RoomsPage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/60">← Back</Link>
-        <h1 className="text-lg font-semibold">Rooms</h1>
+        <Link href="/" className="text-sm text-white/60 flex items-center gap-1">
+          <ArrowBigLeftDash /> {roomsPage("back")}
+        </Link>
+        <h1 className="text-lg font-semibold">{roomsPage("title")}</h1>
         <div className="w-10" />
       </header>
 
@@ -350,7 +392,7 @@ export default function RoomsPage() {
               : "text-white/40 hover:text-white/60"
           }`}
         >
-          Browse
+          {roomsPage("browse")}
           {!loading && total > 0 && (
             <span className={`text-xs ${tab === "browse" ? "text-white/50" : "text-white/25"}`}>
               {total}
@@ -366,7 +408,7 @@ export default function RoomsPage() {
               : "text-white/40 hover:text-white/60"
           }`}
         >
-          My rooms
+          {roomsPage("my_rooms")}
           {!myRoomsLoading && myRooms.length > 0 && (
             <span className={`text-xs ${tab === "mine" ? "text-celo-yellow" : "text-celo-yellow/50"}`}>
               {myRooms.length}
@@ -405,8 +447,8 @@ export default function RoomsPage() {
 
           {!loading && !browseError && rooms.length === 0 && (
             <div className="pt-10 text-center text-sm text-white/50">
-              No open rooms from other players.{" "}
-              <Link href="/create" className="text-celo-yellow underline">Create one!</Link>
+              {roomsPage("no_open_rooms")}{" "}
+              <Link href="/create" className="text-celo-yellow underline">{roomsPage("create_one")}</Link>
             </div>
           )}
 
@@ -450,7 +492,7 @@ export default function RoomsPage() {
                             Room #{room.id}
                           </span>
                           <span className="text-xs">
-                            <span className="text-zinc-600">by </span>
+                            <span className="text-zinc-600">{roomsPage("by")} </span>
                             <span className="font-mono text-zinc-400">{truncateAddress(room.playerA)}</span>
                           </span>
                           <div className={`flex items-center mt-1 gap-1.5 rounded-md px-2.5 py-1 font-bold backdrop-blur-sm ${badgeCls}`}>
@@ -531,8 +573,8 @@ export default function RoomsPage() {
 
           {!myRoomsLoading && myRooms.length === 0 && (
             <div className="pt-10 text-center text-sm text-white/50">
-              You have no active rooms.{" "}
-              <Link href="/create" className="text-celo-yellow underline">Create one!</Link>
+              {roomsPage("no_active_rooms")}{" "}
+              <Link href="/create" className="text-celo-yellow underline">{roomsPage("create_one")}</Link>
             </div>
           )}
 
@@ -540,6 +582,8 @@ export default function RoomsPage() {
             <RoomSections
               rooms={myRooms}
               copiedRoomId={copiedRoomId}
+              sectionLabels={sectionLabels}
+              cardLabels={cardLabels}
               onCopy={(id, secret) => {
                 navigator.clipboard.writeText(secret).then(() => {
                   setCopiedRoomId(id);
@@ -554,7 +598,7 @@ export default function RoomsPage() {
               href={`/profile/${address}`}
               className="mt-2 block text-center text-xs text-white/30 underline underline-offset-2 active:text-white/60"
             >
-              View your full game history →
+              {roomsPage("view_history")}
             </Link>
           )}
         </div>
@@ -570,7 +614,7 @@ export default function RoomsPage() {
             <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
             <span className="relative z-10 flex items-center gap-2">
               <Zap className="h-5 w-5 fill-current" />
-              Create a room
+              {roomsPage("create_a_room")}
             </span>
           </Link>
         </div>
