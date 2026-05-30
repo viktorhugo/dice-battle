@@ -26,10 +26,10 @@ const GRID_COLS: Record<number, string> = {
 };
 
 const STAKE_PRESETS = [
-  { label: "0.50", value: "0.5" },
-  { label: "1.00", value: "1" },
-  { label: "2.00", value: "2" },
-  { label: "5.00", value: "5" },
+  { emoji: "☕", name: "Tinto",    value: "0.3" },
+  { emoji: "🍺", name: "Cerveza", value: "1" },
+  { emoji: "🍔", name: "Almuerzo", value: "3" },
+  { emoji: "🥩", name: "Asado",   value: "10" },
 ];
 
 const TOKEN_SELECTED_CLS: Record<string, string> = {
@@ -315,13 +315,15 @@ export default function CreateRoomPage() {
               key={preset.value}
               type="button"
               onClick={() => setStake(preset.value)}
-              className={`rounded-xl border-2 py-2.5 text-sm font-semibold transition-colors ${
+              className={`flex flex-col items-center gap-0.5 rounded-xl border-2 py-2.5 transition-colors ${
                 stake === preset.value
                   ? "border-celo-yellow bg-celo-yellow/10 text-celo-yellow"
                   : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
               }`}
             >
-              {preset.label}
+              <span className="text-base leading-none">{preset.emoji}</span>
+              <span className="text-[10px] font-medium leading-none">{preset.name}</span>
+              <span className="font-mono text-[10px] leading-none opacity-60">${preset.value}</span>
             </button>
           ))}
         </div>

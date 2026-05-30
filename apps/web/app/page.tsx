@@ -5,6 +5,7 @@ import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarCha
 import { getTranslations } from "next-intl/server";
 import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
+import { QuickMatchButton } from "@/components/QuickMatchButton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function Home() {
@@ -127,6 +128,9 @@ export default async function Home() {
             className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10"
           />
         </Link>
+
+        {/* Quick Match */}
+        <QuickMatchButton />
 
         {/* Browse Rooms */}
         <Link
