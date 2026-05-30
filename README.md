@@ -38,8 +38,10 @@ dice-battle/
 │       │   ├── rooms/              # Browse open rooms — paginated (10/page) + fixed CTA
 │       │   ├── profile/[address]/  # Player profile with stats, achievements & history
 │       │   ├── leaderboard/        # Global leaderboard (Today/Week/All-time)
-│       │   ├── tournament/         # Daily tournament — pool, countdown, leaderboard, quick play
-│       │   └── api/og/[roomId]/    # Edge route — dynamic share card image
+│       │   ├── tournament/         # Weekly tournament — pool, countdown, leaderboard, claim prizes
+│       │   ├── api/
+│       │   │   ├── cron/finalize-tournament/  # Vercel Cron: finalizes Saturday's tournament (Sun 00:00 UTC)
+│       │   │   └── og/[roomId]/    # Edge route — dynamic share card image
 │       ├── components/
 │       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile
 │       │   ├── game/               # DiceAnimation, DicePair, SecretBackupModal
@@ -65,6 +67,9 @@ dice-battle/
 │       ├── config.yaml             # Network + contract + field_selection
 │       ├── schema.graphql          # Room + Player aggregates + raw event tables
 │       └── src/EventHandlers.ts    # State machine handlers per event
+├── docs/
+│   ├── tournament.md               # Full weekly tournament flow & operational guide
+│   └── branching-strategy.md
 ├── scripts/
 │   └── sync-abi.mjs                # Copies ABI from Foundry build → frontend
 ├── .github/workflows/              # CI (contracts + web in parallel)
@@ -192,7 +197,7 @@ Set `NEXT_PUBLIC_INDEXER_URL` in `apps/web/.env.local` to point the frontend at 
 
 ```bash
 NEXT_PUBLIC_INDEXER_URL=http://localhost:8080/v1/graphql
-NEXT_PUBLIC_INDEXER_ADMIN_SECRET=testing
+INDEXER_ADMIN_SECRET=testing
 ```
 
 The hosted Envio indexer (production) is deployed from the `envio` branch. Only push to `envio` when you want to redeploy the indexer — pushes to `master` do not trigger it.
@@ -263,8 +268,42 @@ pnpm --filter contracts test:fuzz
 
 | Network | Address | Verification |
 | --- | --- | --- |
-| Celo mainnet | `0xCF373EaA7A041F12d84b6EF0B34C6B63ECb8E22F` | [Celoscan](https://celoscan.io/address/0xCF373EaA7A041F12d84b6EF0B34C6B63ECb8E22F) |
+| Celo mainnet | `0x9F74B63a23CCdc314840f5aA0Bd8c8Ac9Dd78257` | [Celoscan](https://celoscan.io/address/0x9F74B63a23CCdc314840f5aA0Bd8c8Ac9Dd78257) |
 | Celo Sepolia | `0x8978E35d0755b082C7a77A5FF34dBdE477372915` | [Celoscan Sepolia](https://sepolia.celoscan.io/address/0x8978E35d0755b082C7a77A5FF34dBdE477372915) |
+
+## Weekly Tournament
+
+Every week (Sunday → Saturday) the top 3 players by wins compete for a USDT prize pool funded by the protocol.
+
+### How it works
+
+| Step | Who | When |
+| --- | --- | --- |
+| Fund the pool | Owner calls `fundDay(saturdayDayId, amount)` | Before Saturday |
+| Play games | Any player | All week |
+| Finalize | Vercel Cron hits `/api/cron/finalize-tournament` | Sunday 00:00 UTC |
+| Claim prizes | Winners visit `/tournament` and click Claim | Any time after finalization |
+
+### Prize split
+
+| Place | Share |
+| --- | --- |
+| 🥇 1st | 60% |
+| 🥈 2nd | 25% |
+| 🥉 3rd | 15% |
+
+Minimum **5 games** to qualify. Ranked by wins, winRate as tiebreaker. Empty ranks (fewer than 3 qualifiers) are returned to the owner immediately — no 30-day wait.
+
+### Required env vars
+
+```env
+NEXT_PUBLIC_TOURNAMENT_ADDRESS=   # DailyTournament contract address
+CRON_SECRET=                      # Vercel Cron auth secret (openssl rand -base64 24)
+TOURNAMENT_OWNER_PRIVATE_KEY=     # Owner wallet private key (server-side only)
+INDEXER_ADMIN_SECRET=             # Hasura admin secret (server-side only)
+```
+
+See [docs/tournament.md](docs/tournament.md) for the full operational guide.
 
 ## Why this belongs on MiniPay
 
