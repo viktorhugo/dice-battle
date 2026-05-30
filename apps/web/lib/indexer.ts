@@ -3,11 +3,17 @@ import { GraphQLClient, gql } from "graphql-request";
 const ENDPOINT =
   process.env.NEXT_PUBLIC_INDEXER_URL || "http://localhost:8080/v1/graphql";
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_INDEXER_ADMIN_SECRET;
+// Client-side: uses the public role (no admin secret needed — HASURA_GRAPHQL_UNAUTHORIZED_ROLE=public).
+export const indexer = new GraphQLClient(ENDPOINT);
 
-export const indexer = new GraphQLClient(ENDPOINT, {
-  headers: ADMIN_SECRET ? { "x-hasura-admin-secret": ADMIN_SECRET } : {},
-});
+// Server-side only: used in API routes/cron where INDEXER_ADMIN_SECRET is available.
+// Never import this in client components.
+export function serverIndexer() {
+  const secret = process.env.INDEXER_ADMIN_SECRET;
+  return new GraphQLClient(ENDPOINT, {
+    headers: secret ? { "x-hasura-admin-secret": secret } : {},
+  });
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,7 +274,7 @@ const LEADERBOARD_QUERY = gql`
 `;
 
 const LEADERBOARD_PERIOD_QUERY = gql`
-  query LeaderboardPeriod($since: numeric!) {
+  query LeaderboardPeriod($since: numeric!, $offset: Int!) {
     Room(
       where: {
         _and: [
@@ -276,7 +282,9 @@ const LEADERBOARD_PERIOD_QUERY = gql`
           { state: { _in: ["RESOLVED", "TIED"] } }
         ]
       }
-      limit: 500
+      limit: 1000
+      offset: $offset
+      order_by: { resolvedAt: asc }
     ) {
       winner
       playerA
@@ -638,14 +646,23 @@ export async function getContractStats(): Promise<ContractStats> {
 }
 
 export async function getLeaderboardPeriod(sinceSeconds: number): Promise<LeaderboardEntry[]> {
-  const data = await indexer.request<{ Room: IndexerPeriodRoom[] }>(
-    LEADERBOARD_PERIOD_QUERY,
-    { since: sinceSeconds.toString() }
-  );
+  const PAGE_SIZE = 1000;
+  const allRooms: IndexerPeriodRoom[] = [];
+  let offset = 0;
+
+  while (true) {
+    const data = await indexer.request<{ Room: IndexerPeriodRoom[] }>(
+      LEADERBOARD_PERIOD_QUERY,
+      { since: sinceSeconds.toString(), offset }
+    );
+    allRooms.push(...data.Room);
+    if (data.Room.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
 
   const map = new Map<string, { wins: number; losses: number; ties: number; volume: bigint }>();
 
-  for (const room of data.Room) {
+  for (const room of allRooms) {
     const participants = [room.playerA, room.playerB].filter(Boolean) as string[];
     for (const addr of participants) {
       if (!map.has(addr)) map.set(addr, { wins: 0, losses: 0, ties: 0, volume: 0n });
