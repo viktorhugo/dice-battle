@@ -19,6 +19,7 @@ import { getPlayerProfile, type IndexerPlayer, type IndexerProfileRoom } from "@
 import { ACHIEVEMENTS, buildPlayerStats, sortedAchievements, type Achievement, type PlayerStats, type Rarity } from "@/lib/achievements";
 import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
+import { useStreakReadOnly } from "@/hooks/useDailyStreak";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -199,6 +200,44 @@ function AchievementCard({
   );
 }
 
+// ─── Streak Calendar ─────────────────────────────────────────────────────────
+
+function StreakCalendar({ days, label }: { days: string[]; label: string }) {
+  const daysSet = new Set(days);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  const cells: string[] = [];
+  for (let i = 27; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    cells.push(d.toISOString().slice(0, 10));
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold text-white/50">{label}</p>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((date) => (
+          <div
+            key={date}
+            title={date}
+            className={`aspect-square rounded-sm transition-colors ${
+              date === todayStr
+                ? daysSet.has(date)
+                  ? "bg-[#FCFF52]"
+                  : "bg-white/8 ring-1 ring-[#FCFF52]/40"
+                : daysSet.has(date)
+                ? "bg-[#00C4B3]/60"
+                : "bg-white/8"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -213,6 +252,8 @@ export default function ProfilePage() {
     lost:    profile("lost_label"),
     expired: profile("expired_label"),
   };
+
+  const { days: streakDays } = useStreakReadOnly(isOwnProfile ? address : undefined);
 
   const { data: nickname, refetch: refetchNickname } = useNickname(address);
   const { profile: celoProfile } = useCeloProfile(address);
@@ -449,6 +490,11 @@ export default function ProfilePage() {
             </p>
           )}
         </div>
+      )}
+
+      {/* Activity calendar — only own profile, only if at least one day recorded */}
+      {isOwnProfile && streakDays.length > 0 && (
+        <StreakCalendar days={streakDays} label={profile("activity")} />
       )}
 
       {/* Achievements */}
