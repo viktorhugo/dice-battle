@@ -11,7 +11,7 @@ import { GAME_ADDRESS, TOKENS, ERC20_ABI, NETWORK, getTokenDecimals } from "@/li
 import { getContractStats, type ContractStats } from "@/lib/indexer";
 import { getTokenSymbol, getTokenIcon, truncateAddress, timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
-import { Copy, ExternalLink, Check } from "lucide-react";
+import { Copy, ExternalLink, Check, ArrowBigLeftDash } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const EXPLORER_BASE =
@@ -113,8 +113,8 @@ export default function StatsPage() {
       <WalletBar />
 
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70">
-          {statsI18n("back")}
+        <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70 flex items-center gap-1">
+          <ArrowBigLeftDash /> {statsI18n("back")}
         </Link>
         <h1 className="font-heading text-base font-semibold tracking-wide">{statsI18n("title")}</h1>
         <div className="w-10" />
@@ -130,10 +130,10 @@ export default function StatsPage() {
         />
         <div className="relative flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
-            <p className="text-[10px] uppercase tracking-widest text-white/70 font-heading">
+            <p className="text-[13px] uppercase tracking-widest text-white/70 font-heading">
               {statsI18n("tvl")}
             </p>
-            <p className="text-[10px] font-mono text-white/20">
+            <p className="text-[10px] font-mono text-white/50">
               {statsI18n("stablecoins_only")}
             </p>
           </div>
@@ -158,7 +158,7 @@ export default function StatsPage() {
 
       {/* ── Contract address ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-        <p className="mb-2 text-[10px] uppercase tracking-widest text-white/25 font-heading">
+        <p className="mb-2 text-[11px] uppercase tracking-widest text-white/55 font-heading">
           {statsI18n("contract")}
         </p>
         <div className="flex items-center justify-between gap-2">
@@ -184,14 +184,14 @@ export default function StatsPage() {
             </a>
           </div>
         </div>
-        <p className="mt-2 font-mono text-[10px] text-white/20">
+        <p className="mt-2 font-mono text-[10px] text-amber-400">
           {NETWORK === "celo" ? statsI18n("celo_mainnet") : statsI18n("celo_testnet")}
         </p>
       </div>
 
       {/* ── Locked in contract (on-chain, live) ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-        <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
+        <p className="mb-3 text-[11px] uppercase tracking-widest text-white/45 font-heading">
           {statsI18n("locked_in_contract")}
         </p>
         {balancesLoading ? (
@@ -241,7 +241,7 @@ export default function StatsPage() {
 
       {/* ── All-time stats (indexer) ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-        <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
+        <p className="mb-3 text-[11px] uppercase tracking-widest text-white/45 font-heading">
           {statsI18n("all_time")}
         </p>
         {statsLoading ? (
@@ -275,7 +275,7 @@ export default function StatsPage() {
       {/* ── Volume by token ── */}
       {!statsLoading && stats && Object.keys(stats.volumeByToken).length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
+          <p className="mb-3 text-[11px] uppercase tracking-widest text-white/45 font-heading">
             {statsI18n("total_volume")}
           </p>
           <div className="flex flex-col gap-2">
@@ -311,7 +311,7 @@ export default function StatsPage() {
       {/* ── Recent activity ── */}
       {!statsLoading && stats && stats.recentGames.length > 0 && (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <p className="mb-3 text-[10px] uppercase tracking-widest text-white/25 font-heading">
+          <p className="mb-3 text-[11px] uppercase tracking-widest text-white/45 font-heading">
             {statsI18n("recent_activity")}
           </p>
           <ul className="flex flex-col gap-1.5">
