@@ -36,26 +36,28 @@ dice-battle/
 │       │   │   ├── layout.tsx      # generateMetadata with dynamic OG image
 │       │   │   └── page.tsx        # "use client" game UI
 │       │   ├── rooms/              # Browse open rooms — paginated (10/page) + fixed CTA
-│       │   ├── profile/[address]/  # Player profile with stats, achievements & history
+│       │   ├── profile/[address]/  # Player profile with stats, achievements, history & 28-day activity calendar
 │       │   ├── leaderboard/        # Global leaderboard (Today/Week/All-time)
 │       │   ├── tournament/         # Weekly tournament — pool, countdown, leaderboard, claim prizes
 │       │   ├── api/
 │       │   │   ├── cron/finalize-tournament/  # Vercel Cron: finalizes Saturday's tournament (Sun 00:00 UTC)
 │       │   │   └── og/[roomId]/    # Edge route — dynamic share card image
 │       ├── components/
-│       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile
+│       │   ├── WalletBar.tsx       # Wallet status + avatar link to profile + streak badge + mute toggle
 │       │   ├── game/               # DiceAnimation, DicePair, SecretBackupModal
 │       │   ├── social/             # LiveStats banner (open rooms, games today, all-time)
 │       │   └── ui/                 # shadcn: Dialog, Pagination, Skeleton, Spinner + Identicon
 │       ├── config/                 # Wagmi & Reown AppKit config
-│       ├── hooks/                  # useMiniPay, useErrorToast
+│       ├── hooks/                  # useMiniPay, useErrorToast, useSoundEngine, useDailyStreak
 │       └── lib/
 │           ├── abi.ts              # DiceBattle ABI (auto-synced)
 │           ├── achievements.ts     # 13 achievements — PlayerStats, buildPlayerStats, ACHIEVEMENTS
 │           ├── commitment.ts       # Secret generate / store / load / clear
 │           ├── constants.ts        # Addresses, ROOM_STATE, token decimals, TOURNAMENT_ADDRESS
+│           ├── dailyStreak.ts      # Daily streak logic — read/write play days in localStorage
 │           ├── indexer.ts          # GraphQL client + 9 typed queries (stats, H2H, leaderboard…)
 │           ├── logger.ts           # Dev-only logger
+│           ├── sounds.ts           # Audio assets — dice roll, win, loss, tie
 │           └── utils.ts            # truncateAddress, getTokenSymbol, timeAgo, cn
 ├── packages/
 │   ├── contracts/                  # Foundry project
@@ -104,6 +106,8 @@ This gives us:
 - **Onchain lib:** viem + wagmi (NOT ethers.js — incompatible with MiniPay)
 - **Styling:** Tailwind CSS v3 + shadcn/ui (Dialog, Skeleton)
 - **Animations:** Framer Motion (dice roll phases with spring settle)
+- **Sound:** Web Audio API — dice roll, win, loss and tie sounds with per-user mute toggle (persisted in localStorage)
+- **Daily streak:** localStorage-based activity tracking with 28-day calendar on the profile page
 - **Indexer:** Envio — `Room` and `Player` aggregate entities over all game events
 - **GraphQL client:** `graphql-request` + typed queries in `lib/indexer.ts`
 - **Avatars:** `minidenticons` — deterministic SVG identicons, zero deps, SSR-safe
