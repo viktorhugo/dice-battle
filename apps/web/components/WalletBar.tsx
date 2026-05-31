@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Wallet } from "lucide-react";
+import { Wallet, Volume2, VolumeX } from "lucide-react";
 import { useAppKit } from "@reown/appkit/react";
 import { useChainId, useSwitchChain } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useMiniPay } from "@/hooks/useMiniPay";
+import { useDailyStreak } from "@/hooks/useDailyStreak";
+import { useSoundEngine } from "@/hooks/useSoundEngine";
 import { Identicon } from "@/components/ui/identicon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CHAIN_ID, NETWORK } from "@/lib/constants";
@@ -53,6 +55,8 @@ export function WalletBar() {
   const locale = useLocale();
   const walletbar = useTranslations("walletbar");
   const router = useRouter();
+  const { streak } = useDailyStreak(address);
+  const { muted, toggleSound } = useSoundEngine();
 
   const isWrongNetwork = isConnected && checked && chainId !== CHAIN_ID;
   const networkLabel = NETWORK_LABEL[NETWORK] ?? "Celo";
@@ -93,9 +97,26 @@ export function WalletBar() {
               <Identicon address={address} size={28} />
             </Link>
           )}
+
+          {checked && isConnected && streak > 1 && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-[10px] text-orange-400">
+              🔥 {streak}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleSound}
+            title={muted ? walletbar("unmute") : walletbar("mute")}
+            className="rounded-md border border-white/10 p-1 text-white/40 hover:border-white/25 hover:text-white/70 transition-colors"
+          >
+            {muted
+              ? <VolumeX className="h-3 w-3" />
+              : <Volume2 className="h-3 w-3" />
+            }
+          </button>
           <button
             type="button"
             onClick={toggleLocale}

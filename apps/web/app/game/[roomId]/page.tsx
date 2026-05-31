@@ -19,7 +19,7 @@ import {
   type H2HSummary,
 } from "@/lib/indexer";
 import Image from "next/image";
-import { Dices } from "lucide-react";
+import { ArrowBigLeftDash, Dices } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { getTokenSymbol, getTokenIcon, truncateAddress, formatDate, timeAgo } from "@/lib/utils";
 import { useDisplayName } from "@/hooks/useDisplayName";
@@ -27,12 +27,13 @@ import { useErrorToast } from "@/hooks/useErrorToast";
 import { useFireworks } from "@/hooks/useFireworks";
 import { useAshes } from "@/hooks/useAshes";
 import { useTieClash } from "@/hooks/useTieClash";
+import { useSoundEngine } from "@/hooks/useSoundEngine";
 import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
 
 const CELO_SECS_PER_BLOCK = 5;
-const REVEAL_WINDOW_BLOCKS = 17_280n; // 24 h on Celo Mainnet (5 s/block)
+const REVEAL_WINDOW_BLOCKS = 200n; // matches DiceBattle.sol REVEAL_WINDOW_BLOCKS constant
 
 type Room = {
   playerA: `0x${string}`;
@@ -71,6 +72,7 @@ export default function GamePage() {
   const fireFireworks = useFireworks();
   const fallAshes = useAshes();
   const clashTie = useTieClash();
+  const { diceRoll, winSound, lossSound, tieSound } = useSoundEngine();
 
   const celebrationFiredRef = useRef(false);
   useEffect(() => {
@@ -82,11 +84,14 @@ export default function GamePage() {
 
     if (won || lost || tied) {
       celebrationFiredRef.current = true;
+      if (won) winSound();
+      else if (tied) tieSound();
+      else lossSound();
       const effect = won ? fireFireworks : tied ? clashTie : fallAshes;
       const t = setTimeout(effect, 1400);
       return () => clearTimeout(t);
     }
-  }, [result, address, fireFireworks, fallAshes, clashTie]);
+  }, [result, address, fireFireworks, fallAshes, clashTie, winSound, lossSound, tieSound]);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [hostStats, setHostStats] = useState<PlayerMiniStats | null>(null);
@@ -239,6 +244,7 @@ export default function GamePage() {
       setError("Could not find your secret locally. It must be on the device you used to create the room.");
       return;
     }
+    diceRoll();
     setBusy(true);
     try {
       const hash = await writeContractAsync({
@@ -320,8 +326,8 @@ export default function GamePage() {
 
       {/* Header */}
       <header className="flex items-center justify-between pt-2">
-        <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70">
-          {game("back")}
+        <Link href="/" className="text-sm text-white/40 transition-colors hover:text-white/70 flex items-center gap-1">
+          <ArrowBigLeftDash /> {game("back")}
         </Link>
         <h1 className="font-heading text-base font-semibold tracking-wide">
           Room <span style={{ color: "#FCFF52" }}>#{params.roomId}</span>
@@ -338,8 +344,8 @@ export default function GamePage() {
 
       {/* Created at row */}
       {createdAt && (
-        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
-          <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("room_created")}</span>
+        <div className="flex items-center justify-between rounded-xl border-2 border-white/10 bg-white/5 px-4 py-2.5 backdrop-blur-sm">
+          <span className="text-[10px] uppercase tracking-widest text-white/45 font-heading">{game("room_created")}</span>
           <span className="font-mono text-xs text-white/50">
             {formatDate(createdAt)} <span className="text-white/30">({timeAgo(createdAt)})</span>
           </span>
@@ -347,7 +353,7 @@ export default function GamePage() {
       )}
 
       {/* Dice arena */}
-      <section className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm px-4 pt-5 pb-5 flex flex-col gap-4">
+      <section className="relative rounded-2xl border-2 border-white/10 bg-white/5 backdrop-blur-sm px-4 pt-5 pb-5 flex flex-col gap-4">
         {/* Ambient glows */}
         <div aria-hidden className="pointer-events-none absolute left-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-20" style={{ background: "#FCFF52" }} />
         <div aria-hidden className="pointer-events-none absolute right-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-15" style={{ background: "#00C4B3" }} />
@@ -362,7 +368,7 @@ export default function GamePage() {
               const total = hostStats.wins + hostStats.losses + hostStats.ties;
               const wr = total > 0 ? Math.round((hostStats.wins / total) * 100) : 0;
               return (
-                <span className="font-mono text-[9px] text-white/30">
+                <span className="font-mono text-[11px] text-white/40">
                   <span className="text-green-400">{hostStats.wins}W</span>
                   {" · "}
                   <span className="text-red-400">{hostStats.losses}L</span>
@@ -376,7 +382,7 @@ export default function GamePage() {
             </span>
           </div>
 
-          <span className="font-heading text-lg font-bold text-white/20 mb-6">{game("vs")}</span>
+          <span className="font-heading text-lg font-bold text-white/50 mb-6">{game("vs")}</span>
 
           {/* Guest side */}
           <div className="flex flex-col items-center gap-2">
@@ -389,7 +395,7 @@ export default function GamePage() {
               const total = guestStats.wins + guestStats.losses + guestStats.ties;
               const wr = total > 0 ? Math.round((guestStats.wins / total) * 100) : 0;
               return (
-                <span className="font-mono text-[9px] text-white/30">
+                <span className="font-mono text-[11px] text-white/40">
                   <span className="text-green-400">{guestStats.wins}W</span>
                   {" · "}
                   <span className="text-red-400">{guestStats.losses}L</span>
@@ -407,10 +413,10 @@ export default function GamePage() {
 
       {/* Outcome */}
       {result && (
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center backdrop-blur-sm">
+        <section className="rounded-2xl border-2 border-white/10 bg-white/5 p-5 text-center backdrop-blur-sm">
           {result.kind === "tie" && (
             <>
-              <p className="font-heading text-xl font-bold" style={{ color: "#FCFF52" }}>{game("its_tie")}</p>
+              <p className="font-heading text-xl text-white/40 font-bold" style={{ color: "#FCFF52" }}>{game("its_tie")}</p>
               <p className="mt-1 font-mono text-sm text-white/70">
                 {game("refunded", { amount: formatUnits(room.stake, tokenDecimals ?? 18), token: tokenSymbol })}
               </p>
@@ -457,7 +463,7 @@ export default function GamePage() {
                 aria-hidden
               />
             )}
-            <p className="text-[10px] uppercase tracking-widest text-white/30 font-heading">{game("prize_if_win")}</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40 font-heading">{game("prize_if_win")}</p>
             <div className="mt-1.5 flex items-center gap-2">
               {tokenIcon && (
                 <Image src={tokenIcon} alt={tokenSymbol} width={20} height={20} className="rounded-full" />
@@ -471,8 +477,8 @@ export default function GamePage() {
 
           {/* Stake + room meta row */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-0.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
-              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("each_stakes")}</span>
+            <div className="flex flex-col gap-0.5 rounded-xl border-2 border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
+              <span className="text-[10px] uppercase tracking-widest text-white/45 font-heading">{game("each_stakes")}</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {tokenIcon && (
                   <Image src={tokenIcon} alt={tokenSymbol} width={14} height={14} className="rounded-full" />
@@ -482,8 +488,8 @@ export default function GamePage() {
                 </span>
               </div>
             </div>
-            <div className="flex flex-col gap-0.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
-              <span className="text-[10px] uppercase tracking-widest text-white/25 font-heading">{game("matched_at")}</span>
+            <div className="flex flex-col gap-0.5 rounded-xl border-2 border-white/10 bg-white/5 px-3 py-2.5 backdrop-blur-sm">
+              <span className="text-[10px] uppercase tracking-widest text-white/45 font-heading">{game("matched_at")}</span>
               <span className="font-mono text-sm font-semibold text-white/70 mt-0.5">
                 Block #{room.matchedAtBlock.toString()}
               </span>
@@ -495,12 +501,12 @@ export default function GamePage() {
 
       {/* Head-to-head */}
       {h2h && h2h.myWins + h2h.theirWins + h2h.ties > 0 && (
-        <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-mono">
-          <span className="text-white/30">{game("vs_opponent")}</span>
+        <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/10 bg-white/5 px-3 py-2 text-xs font-mono">
+          <span className="text-white/40">{game("vs_opponent")}</span>
           <span className="text-green-400">{h2h.myWins}W</span>
-          <span className="text-white/20">·</span>
+          <span className="text-white/40">·</span>
           <span className="text-red-400">{h2h.theirWins}L</span>
-          {h2h.ties > 0 && <><span className="text-white/20">·</span><span className="text-yellow-400">{h2h.ties}T</span></>}
+          {h2h.ties > 0 && <><span className="text-white/40">·</span><span className="text-yellow-400">{h2h.ties}T</span></>}
         </div>
       )}
 
@@ -528,7 +534,7 @@ export default function GamePage() {
                 </p>
               )}
               {!canClaim && revealTimeLabel && (
-                <p className={`text-center text-xs font-mono ${blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? "text-orange-400/70" : "text-white/25"}`}>
+                <p className={`text-center text-xs font-mono ${blocksUntilExpiry !== null && blocksUntilExpiry < 720 ? "text-orange-400/70" : "text-white/40"}`}>
                   {blocksUntilExpiry !== null && blocksUntilExpiry < 720
                     ? game("only_left", { time: revealTimeLabel })
                     : game("time_left", { time: revealTimeLabel })}
@@ -589,9 +595,9 @@ export default function GamePage() {
 
           {isPlayerB && !canClaim && (
             <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm">
-              <SoftBlurText text={game("waiting_host")} className="text-sm text-white/50" loop />
+              <SoftBlurText text={game("waiting_host")} className="text-sm text-amber-400" loop />
               {revealTimeLabel && (
-                <p className="text-[10px] font-mono text-white/25">
+                <p className="text-[10px] font-mono text-white/55">
                   {game("host_has_left", { time: revealTimeLabel })}
                 </p>
               )}

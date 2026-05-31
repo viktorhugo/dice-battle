@@ -7,7 +7,9 @@
   },
   "walletbar": {
     "enter_arena": "Enter Arena",
-    "wrong_network": "⚠️ Wrong network — tap to switch to {network}"
+    "wrong_network": "⚠️ Wrong network — tap to switch to {network}",
+    "mute": "Mute sounds",
+    "unmute": "Unmute sounds"
   },
   "home": {
     "tagline": "Roll.  Risk.  Win.",
@@ -191,7 +193,8 @@
     "tied_label": "Tied",
     "won_label": "Won",
     "lost_label": "Lost",
-    "expired_label": "Expired"
+    "expired_label": "Expired",
+    "activity": "Activity"
   },
   "stats": {
     "back": "← Home",

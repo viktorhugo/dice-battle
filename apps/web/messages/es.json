@@ -7,7 +7,9 @@
   },
   "walletbar": {
     "enter_arena": "Entrar a la Arena",
-    "wrong_network": "⚠️ Red incorrecta — toca para cambiar a {network}"
+    "wrong_network": "⚠️ Red incorrecta — toca para cambiar a {network}",
+    "mute": "Silenciar",
+    "unmute": "Activar sonido"
   },
   "home": {
     "tagline": "Lanza.  Arriesga.  Gana.",
@@ -133,7 +135,7 @@
     "room_cancelled": "Sala cancelada — apuesta recuperada"
   },
   "game": {
-    "back": "← Inicio",
+    "back": "Inicio",
     "room_created": "Sala creada",
     "live": "En vivo",
     "you": "TÚ",
@@ -191,10 +193,11 @@
     "tied_label": "Empate",
     "won_label": "Ganó",
     "lost_label": "Perdió",
-    "expired_label": "Expiró"
+    "expired_label": "Expiró",
+    "activity": "Actividad"
   },
   "stats": {
-    "back": "← Inicio",
+    "back": "Inicio",
     "title": "Estadísticas",
     "tvl": "Valor Total Bloqueado",
     "stablecoins_only": "Celo Mainnet · solo stablecoins",
