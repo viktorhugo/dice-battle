@@ -20,16 +20,16 @@ export const metadata: Metadata = {
   description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
   icons: {
     icon: [
-      { url: "/images/favicon.png", type: "image/png" },
+      { url: "/images/favicon.webp", type: "image/png" },
     ],
-    apple: "/images/favicon.png",
-    shortcut: "/images/favicon.png",
+    apple: "/images/favicon.webp",
+    shortcut: "/images/favicon.webp",
   },
   openGraph: {
     title: "Dice Battle 🎲",
     description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
     type: "website",
-    images: [{ url: "/images/favicon.png", width: 512, height: 512 }],
+    images: [{ url: "/images/favicon.webp", width: 512, height: 512 }],
   },
 };
 

@@ -48,7 +48,7 @@ export default async function Home() {
         {/* Hero image */}
         <div className="relative z-10 w-full">
           <Image
-            src="/images/dices.png"
+            src="/images/dices.webp"
             alt="Dice Battle — dados enfrentados"
             width={1536}
             height={1024}
