@@ -91,6 +91,7 @@ export function LiveStats() {
   const showMatchedStat = !!address;
   const cols = showMatchedStat ? "grid-cols-4" : "grid-cols-3";
 
+
   if (!stats) {
     return (
       <div className={`grid ${cols} gap-2 rounded-xl border-2 border-white/10 bg-white/5 p-3`}>
@@ -114,10 +115,10 @@ export function LiveStats() {
       />
       {showMatchedStat && (
         <StatItem
-          value={stats.matchedForMe ?? 0}
-          label={liveStats("to_reveal")}
+          value={stats.myActiveRooms ?? 0}
+          label={liveStats("my_rooms")}
           href="/rooms?tab=mine"
-          highlight={(stats.matchedForMe ?? 0) > 0}
+          highlight={(stats.myActiveRooms ?? 0) > 0}
           className="border-r  border-r-2 border-white/10 py-3"
         />
       )}

@@ -200,8 +200,8 @@ function RoomSections({
           <div className="flex items-center gap-2 px-1">
             <span className={`h-1.5 w-1.5 rounded-full ${section.dot}`} />
             <span className={`text-[10px] uppercase tracking-widest font-heading ${section.text}`}>{sectionLabels[section.id]}</span>
-            <div className="flex-1 h-px bg-white/5" />
-            <span className="text-[10px] text-white/20">{section.rooms.length}</span>
+            <div className="flex-1 h-px bg-white/40" />
+            <span className="text-[10px] text-white/60">{section.rooms.length}</span>
           </div>
           <ul className="flex flex-col gap-3">
             {section.rooms.map(room => (
@@ -503,7 +503,7 @@ export default function RoomsPage() {
                               height={18}
                               className="rounded-full"
                             />
-                            <span className="text-sm">{amount} {symbol}</span>
+                            <span className="text-sm text-zinc-300">{amount} {symbol}</span>
                           </div>
                         </div>
 

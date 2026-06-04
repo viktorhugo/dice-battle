@@ -353,7 +353,7 @@ export default function CreateRoomPage() {
         <div className="relative flex flex-col gap-2 text-sm">
           <div className="flex justify-between items-center">
             <span className="text-zinc-400">{create("your_balance")}</span>
-            <span className={`font-mono text-sm font-semibold ${hasInsufficientBalance ? "text-red-400" : "text-zinc-300"}`}>
+            <span className={`font-mono text-sm font-semibold ${hasInsufficientBalance ? "text-red-400" : "text-zinc-200"}`}>
               {balanceFormatted != null
                 ? `${parseFloat(balanceFormatted).toFixed(2)} ${token}`
                 : <span className="text-zinc-600">…</span>

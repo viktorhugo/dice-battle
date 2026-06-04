@@ -1,6 +1,6 @@
 {
   "common": {
-    "back": "← Back",
+    "back": "Back",
     "footer": "Built for MiniPay on Celo · Proof of Ship 2026",
     "connect_wallet": "Connect wallet",
     "loading": "Loading…"
@@ -72,7 +72,7 @@
   },
   "liveStats": {
     "open_rooms": "Open rooms",
-    "to_reveal": "To reveal",
+    "my_rooms": "My rooms",
     "played_today": "Played today",
     "all_time": "All-time"
   },
@@ -135,7 +135,7 @@
     "room_cancelled": "Room cancelled — stake recovered"
   },
   "game": {
-    "back": "← Home",
+    "back": "Home",
     "room_created": "Room created",
     "live": "Live",
     "you": "YOU",
@@ -197,7 +197,7 @@
     "activity": "Activity"
   },
   "stats": {
-    "back": "← Home",
+    "back": "Home",
     "title": "Protocol Stats",
     "tvl": "Total Value Locked",
     "stablecoins_only": "Celo Mainnet · stablecoins only",

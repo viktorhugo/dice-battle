@@ -246,11 +246,22 @@ const LIVE_STATS_FILTERED_QUERY = gql`
     ) {
       id
     }
-    matchedForMe: Room(
+    myRoomsAsHost: Room(
       where: {
         _and: [
-          { state: { _eq: "MATCHED" } }
           { playerA: { _eq: $excludeAddress } }
+          { state: { _in: ["OPEN", "MATCHED"] } }
+        ]
+      }
+      limit: 50
+    ) {
+      id
+    }
+    myRoomsAsGuest: Room(
+      where: {
+        _and: [
+          { playerB: { _eq: $excludeAddress } }
+          { state: { _eq: "MATCHED" } }
         ]
       }
       limit: 50
@@ -347,7 +358,7 @@ export type LiveStats = {
   openRooms: number;
   gamesToday: number;
   totalGames: number;
-  matchedForMe?: number;
+  myActiveRooms?: number;
 };
 
 export async function getLiveStats(excludeAddress?: string): Promise<LiveStats> {
@@ -360,13 +371,18 @@ export async function getLiveStats(excludeAddress?: string): Promise<LiveStats> 
     openRooms: { id: string }[];
     gamesToday: { id: string }[];
     totalGames: { id: string }[];
-    matchedForMe?: { id: string }[];
+    myRoomsAsHost?: { id: string }[];
+    myRoomsAsGuest?: { id: string }[];
   }>(query, variables);
+  const myActiveRooms =
+    data.myRoomsAsHost != null
+      ? (data.myRoomsAsHost.length) + (data.myRoomsAsGuest?.length ?? 0)
+      : undefined;
   return {
     openRooms: data.openRooms.length,
     gamesToday: data.gamesToday.length,
     totalGames: data.totalGames.length,
-    ...(data.matchedForMe != null && { matchedForMe: data.matchedForMe.length }),
+    ...(myActiveRooms != null && { myActiveRooms }),
   };
 }
 
