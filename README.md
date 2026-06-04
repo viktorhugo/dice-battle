@@ -22,6 +22,56 @@ Dice Battle is a two-player dice battle where the escrow, the randomness, and th
 - **MiniPay-first.** Detects the MiniPay environment and hides all wallet UX.
 - **Gas in stablecoins.** Users pay fees in cUSD via CIP-64 fee abstraction.
 
+## Features
+
+### Core game
+| Feature | Details |
+| --- | --- |
+| PvP dice battle | Two players, four dice (two each), highest sum wins |
+| Commit-reveal fairness | Player A locks a secret hash before Player B joins — neither can manipulate the outcome |
+| `block.prevrandao` entropy | On-chain randomness unknown at commit time, preventing cherry-picking |
+| Instant payout | Winner receives funds in the same transaction that reveals the result |
+| Grief protection | If Player A stalls, Player B claims the full pot after a 200-block window (~16 min) |
+| Multi-token stakes | cUSD (USDm), USDT and USDC — any amount above 0 |
+| 2% protocol fee | Applied to the pot on win/claim; refunded in full on a tie |
+| Secret recovery | Lost your secret? Paste the hex from another device directly in the game UI |
+
+### UX & social
+| Feature | Details |
+| --- | --- |
+| Quick Match | Auto-joins the first available open room with one tap |
+| Live stats bar | Open rooms, your active rooms, games today, all-time counter — refreshes every 30 s |
+| Dynamic OG images | Every game gets a shareable `/api/og/[roomId]` card with dice rolls and winner |
+| Sound engine | Dice roll, win, loss and tie sounds — per-user mute toggle persisted in localStorage |
+| i18n | English + Spanish with automatic browser locale detection |
+| MiniPay auto-connect | No "Connect Wallet" button — wallet detected and connected silently |
+
+### Player progression
+| Feature | Details |
+| --- | --- |
+| Player profiles | Win/loss/tie stats, volume, current streak, head-to-head history |
+| 13 achievements | Four rarity tiers (Common → Legendary) with live progress bars |
+| 28-day activity calendar | Heatmap of play days visible on your own profile |
+| Daily streak badge | Streak counter in the WalletBar; highlights at 3+ day streaks |
+| Head-to-head stats | Per-opponent W/L/T record shown in the game room |
+
+### Leaderboard & tournament
+| Feature | Details |
+| --- | --- |
+| Global leaderboard | Today / Week / All-time tabs, sortable by Wins, Win Rate or Volume |
+| Weekly tournament | Top 3 players by wins split a USDT prize pool (60 / 25 / 15 %) |
+| Automated finalization | Vercel Cron calls the contract every Sunday at 00:00 UTC |
+| On-chain prize claim | Winners claim directly from the `DailyTournament` contract |
+
+### Developer & protocol
+| Feature | Details |
+| --- | --- |
+| Protocol stats page | Live TVL, volume by token, recent game activity |
+| Envio indexer | `Room` and `Player` aggregate entities, GraphQL API |
+| ABI auto-sync | `pnpm sync-abi` copies the Foundry build output to the frontend — no manual work |
+| CI/CD | GitHub Actions: contract fuzz (10 000 runs) + TypeScript build in parallel |
+| Fully open source | MIT license, monorepo, documented deploy scripts |
+
 ## Monorepo layout
 
 ```text
