@@ -14,22 +14,37 @@ const spaceGrotesk = Space_Grotesk({
   weight: ['500', '600', '700'],
 });
 
+function getBaseUrl(): URL {
+  // 1. Explicit canonical URL (set in Vercel env vars for custom domains)
+  if (process.env.NEXT_PUBLIC_URL) return new URL(process.env.NEXT_PUBLIC_URL);
+  // 2. Auto-injected by Vercel for every deployment (preview + production)
+  if (process.env.VERCEL_URL) return new URL(`https://${process.env.VERCEL_URL}`);
+  // 3. Local dev fallback
+  return new URL("http://localhost:3000");
+}
+
+const APP_DESCRIPTION = "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000"),
+  metadataBase: getBaseUrl(),
   title: "Dice Battle 🎲",
-  description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
+  description: APP_DESCRIPTION,
   icons: {
-    icon: [
-      { url: "/images/favicon.webp", type: "image/png" },
-    ],
+    icon: [{ url: "/images/favicon.webp", type: "image/png" }],
     apple: "/images/favicon.webp",
     shortcut: "/images/favicon.webp",
   },
   openGraph: {
     title: "Dice Battle 🎲",
-    description: "PvP dice battle on Celo. Stake, roll, win — all onchain, all in MiniPay.",
+    description: APP_DESCRIPTION,
     type: "website",
-    images: [{ url: "/images/favicon.webp", width: 512, height: 512 }],
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Dice Battle — PvP dice game on Celo" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dice Battle 🎲",
+    description: APP_DESCRIPTION,
+    images: ["/api/og"],
   },
 };
 
