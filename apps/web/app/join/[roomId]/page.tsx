@@ -16,7 +16,7 @@ import {
   getHeadToHead,
   type PlayerMiniStats,
   type H2HSummary,
-} from "@/lib/indexer";
+} from "@/lib/repository";
 import { getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { useDisplayName } from "@/hooks/useDisplayName";

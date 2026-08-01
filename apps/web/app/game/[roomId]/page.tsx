@@ -17,7 +17,7 @@ import {
   getRoomCreatedAt,
   type PlayerMiniStats,
   type H2HSummary,
-} from "@/lib/indexer";
+} from "@/lib/repository";
 import Image from "next/image";
 import { ArrowBigLeftDash, Dices } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";

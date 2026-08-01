@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Zap, Loader2 } from "lucide-react";
 import { useConnection } from "wagmi";
 import { useTranslations } from "next-intl";
-import { getOpenRoomsPage } from "@/lib/indexer";
+import { getOpenRoomsPage } from "@/lib/repository";
 
 export function QuickMatchButton() {
   const router = useRouter();

@@ -8,7 +8,7 @@ import { usePublicClient } from "wagmi";
 import { WalletBar } from "@/components/WalletBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GAME_ADDRESS, TOKENS, ERC20_ABI, NETWORK, getTokenDecimals } from "@/lib/constants";
-import { getContractStats, type ContractStats } from "@/lib/indexer";
+import { getContractStats, type ContractStats } from "@/lib/repository";
 import { getTokenSymbol, getTokenIcon, truncateAddress, timeAgo } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { Copy, ExternalLink, Check, ArrowBigLeftDash } from "lucide-react";

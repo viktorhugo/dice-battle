@@ -21,7 +21,7 @@ import {
   TOURNAMENT_ABI,
   getTokenAddress,
 } from "@/lib/constants";
-import { getLeaderboardPeriod, type LeaderboardEntry } from "@/lib/indexer";
+import { getLeaderboardPeriod, type LeaderboardEntry } from "@/lib/repository";
 import { useDisplayName } from "@/hooks/useDisplayName";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";

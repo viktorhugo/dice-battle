@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useConnection } from "wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getLiveStats, type LiveStats } from "@/lib/indexer";
+import { getLiveStats, type LiveStats } from "@/lib/repository";
 import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
 

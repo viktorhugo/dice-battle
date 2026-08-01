@@ -13,7 +13,7 @@ import {
   type LeaderboardEntry,
   type LeaderboardTab,
   type SortKey,
-} from "@/lib/indexer";
+} from "@/lib/repository";
 import { logger } from "@/lib/logger";
 import { ArrowBigLeftDash } from "lucide-react";
 import { useTranslations } from "next-intl";

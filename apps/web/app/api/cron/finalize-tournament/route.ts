@@ -3,7 +3,7 @@ import { createPublicClient, createWalletClient, http, isAddress, getAddress } f
 import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 import { TOURNAMENT_ADDRESS, TOURNAMENT_ABI } from "@/lib/constants";
-import { getLeaderboardPeriod } from "@/lib/indexer";
+import { getLeaderboardPeriod } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

@@ -20,7 +20,7 @@ import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { getTokenDecimals, GAME_ADDRESS, ROOM_STATE } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol, getTokenIcon, timeAgo, formatDate } from "@/lib/utils";
 import Image from "next/image";
-import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, getMatchedRoomsAsGuest, type IndexerRoom } from "@/lib/indexer";
+import { getOpenRoomsPage, getRoomsCreatedAt, getActiveRoomsByPlayer, getMatchedRoomsAsGuest, type Room } from "@/lib/repository";
 import { clearSecret, loadSecret } from "@/lib/commitment";
 import { Zap, Copy, Check, ArrowBigLeftDash } from "lucide-react";
 import { BorderBeam } from "@/components/ui/border-beam";
@@ -239,7 +239,7 @@ export default function RoomsPage() {
     searchParams.get("tab") === "mine" ? "mine" : "browse"
   );
 
-  const [rooms, setRooms] = useState<IndexerRoom[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);

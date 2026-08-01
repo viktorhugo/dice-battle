@@ -15,7 +15,7 @@ import { useNickname } from "@/hooks/useNickname";
 import { useCeloProfile } from "@/hooks/useCeloProfile";
 import { getTokenDecimals } from "@/lib/constants";
 import { truncateAddress, getTokenSymbol } from "@/lib/utils";
-import { getPlayerProfile, type IndexerPlayer, type IndexerProfileRoom } from "@/lib/indexer";
+import { getPlayerProfile, type Player, type Room } from "@/lib/repository";
 import { ACHIEVEMENTS, buildPlayerStats, sortedAchievements, type Achievement, type PlayerStats, type Rarity } from "@/lib/achievements";
 import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
@@ -23,7 +23,7 @@ import { useStreakReadOnly } from "@/hooks/useDailyStreak";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function computeDiceStats(rooms: IndexerProfileRoom[], address: string) {
+function computeDiceStats(rooms: Room[], address: string) {
   const addrLower = address.toLowerCase();
   const rolls: number[] = [];
   let bestTotal = -1;
@@ -48,7 +48,7 @@ function computeDiceStats(rooms: IndexerProfileRoom[], address: string) {
   return { avg, bestHand, lucky };
 }
 
-function computeAvgDuration(rooms: IndexerProfileRoom[]): string | null {
+function computeAvgDuration(rooms: Room[]): string | null {
   const durations = rooms
     .filter((r) => r.resolvedAt && r.createdAt)
     .map((r) => Number(r.resolvedAt) - Number(r.createdAt));
@@ -96,7 +96,7 @@ function OutcomeBar({ wins, losses, ties, gamesLabel }: { wins: number; losses: 
 }
 
 function GameRow({ room, address, resultLabels }: {
-  room: IndexerProfileRoom;
+  room: Room;
   address: string;
   resultLabels: { tied: string; won: string; lost: string; expired: string };
 }) {
@@ -259,8 +259,8 @@ export default function ProfilePage() {
   const { profile: celoProfile } = useCeloProfile(address);
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
 
-  const [player, setPlayer] = useState<IndexerPlayer | null>(null);
-  const [rooms, setRooms] = useState<IndexerProfileRoom[]>([]);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);

@@ -1,5 +1,5 @@
 import { getTokenDecimals } from "@/lib/constants";
-import type { IndexerPlayer, IndexerProfileRoom } from "@/lib/indexer";
+import type { Player, Room } from "@/lib/repository";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,8 +181,8 @@ export function sortedAchievements(stats: PlayerStats): {
 // ─── Stats builder ────────────────────────────────────────────────────────────
 
 export function buildPlayerStats(
-  player: IndexerPlayer,
-  rooms: IndexerProfileRoom[],
+  player: Player,
+  rooms: Room[],
   address: string
 ): PlayerStats {
   const addrLower = address.toLowerCase();
