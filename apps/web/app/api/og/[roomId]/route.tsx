@@ -1,46 +1,14 @@
 import { ImageResponse } from "next/og";
-import { gql } from "graphql-request";
-import { indexer } from "@/lib/indexer";
+import { getRoomById } from "@/lib/repository";
 import { getTokenDecimals } from "@/lib/constants";
 import { getTokenSymbol } from "@/lib/utils";
+import type { Room } from "@/lib/repository/types";
 
 export const runtime = "edge";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type OGRoom = {
-  state: string;
-  playerA: string;
-  playerB: string | null;
-  winner: string | null;
-  rollA1: number | null;
-  rollA2: number | null;
-  rollB1: number | null;
-  rollB2: number | null;
-  stake: string;
-  token: string;
-};
-
-// ─── Query ────────────────────────────────────────────────────────────────────
-
-const ROOM_OG_QUERY = gql`
-  query RoomOG($id: String!) {
-    Room_by_pk(id: $id) {
-      state
-      playerA
-      playerB
-      winner
-      rollA1
-      rollA2
-      rollB1
-      rollB2
-      stake
-      token
-    }
-  }
-`;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+type OGRoom = Pick<Room, "state" | "playerA" | "playerB" | "winner" | "rollA1" | "rollA2" | "rollB1" | "rollB2" | "stake" | "token">;
 
 function fmtAmount(raw: string, token: string): string {
   const addr = token as `0x${string}`;
@@ -124,11 +92,7 @@ export async function GET(
 
   let room: OGRoom | null = null;
   try {
-    const data = await indexer.request<{ Room_by_pk: OGRoom | null }>(
-      ROOM_OG_QUERY,
-      { id: roomId }
-    );
-    room = data.Room_by_pk;
+    room = await getRoomById(roomId);
   } catch {
     // Indexer unavailable — render generic fallback image
   }
