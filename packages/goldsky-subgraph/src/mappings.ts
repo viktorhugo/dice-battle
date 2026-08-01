@@ -61,15 +61,9 @@ export function handleRoomCreated(event: RoomCreated): void {
   room.playerB    = null;
   room.token      = event.params.token.toHexString().toLowerCase();
   room.stake      = event.params.stake;
-  room.winner     = null;
-  room.rollA1     = null;
-  room.rollA2     = null;
-  room.rollB1     = null;
-  room.rollB2     = null;
+  // rollA1/A2/B1/B2 and winner/playerB/resolvedAt/txResolve left unset — nullable fields default to null in AssemblyScript
   room.createdAt  = event.block.timestamp;
-  room.resolvedAt = null;
   room.txCreate   = event.transaction.hash.toHexString();
-  room.txResolve  = null;
   room.save();
 
   const gs = getOrCreateGlobalStats();
