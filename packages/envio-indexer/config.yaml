@@ -21,11 +21,11 @@ contracts:
 
 networks:
 - id: 42220
-  start_block: 65267000
+  start_block: 73695909
   contracts:
   - name: DiceBattle
     address:
-    - 0x29e627bf9De612A784F541BCD24aE9e285b4C72F
+    - 0x320Ee4e931B7182eD4BFC085aaa3060895B6A6B6
 
 # - id: 44787  # Celo Sepolia (no HyperSync — uses RPC)
 #   start_block: 23860807
