@@ -1,0 +1,37 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: DiceBattle
+    network: celo
+    source:
+      address: "0x320Ee4e931B7182eD4BFC085aaa3060895B6A6B6"
+      abi: DiceBattle
+      startBlock: 73695909
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Room
+        - Player
+        - GlobalStats
+        - TokenVolume
+      abis:
+        - name: DiceBattle
+          file: ./abis/DiceBattle.json
+      eventHandlers:
+        - event: "RoomCreated(indexed uint256,indexed address,indexed address,uint256,bytes32)"
+          handler: handleRoomCreated
+        - event: "RoomJoined(indexed uint256,indexed address,uint256)"
+          handler: handleRoomJoined
+        - event: "RoomResolved(indexed uint256,indexed address,uint8,uint8,uint8,uint8,uint256,uint256)"
+          handler: handleRoomResolved
+        - event: "RoomTied(indexed uint256,uint8,uint8,uint8,uint8)"
+          handler: handleRoomTied
+        - event: "RoomExpiredClaim(indexed uint256,indexed address)"
+          handler: handleRoomExpiredClaim
+        - event: "RoomCancelled(indexed uint256)"
+          handler: handleRoomCancelled
+      file: ./src/mappings.ts

@@ -1,0 +1,14 @@
+{
+  "name": "@dice-battle/goldsky-subgraph",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "goldsky subgraph deploy dice-battle/1.0.0 --path ./build"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.79.0",
+    "@graphprotocol/graph-ts": "^0.35.1"
+  }
+}

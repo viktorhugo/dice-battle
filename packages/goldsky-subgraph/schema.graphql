@@ -1,0 +1,48 @@
+type Room @entity {
+  id: ID!
+  state: String!
+  playerA: String!
+  playerB: String
+  token: String!
+  stake: BigInt!
+  winner: String
+  rollA1: Int
+  rollA2: Int
+  rollB1: Int
+  rollB2: Int
+  createdAt: BigInt!
+  resolvedAt: BigInt
+  txCreate: String!
+  txResolve: String
+}
+
+type Player @entity {
+  id: ID!
+  totalGames: BigInt!
+  wins: BigInt!
+  losses: BigInt!
+  ties: BigInt!
+  totalVolume: BigInt!
+  totalWon: BigInt!
+  totalLost: BigInt!
+  lastGameAt: BigInt!
+  currentStreak: BigInt!
+  longestStreak: BigInt!
+}
+
+# Counters updated on every handler — avoids The Graph's 1000-entity query cap
+type GlobalStats @entity {
+  id: ID!
+  open: BigInt!
+  matched: BigInt!
+  resolved: BigInt!
+  tied: BigInt!
+  expired: BigInt!
+  totalFinished: BigInt!
+}
+
+# Cumulative volume per token — avoids scanning all rooms for volume aggregation
+type TokenVolume @entity {
+  id: ID!
+  volume: BigInt!
+}
