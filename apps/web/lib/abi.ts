@@ -35,7 +35,7 @@ export const DICE_BATTLE_ABI = [
   },
   {
     "type": "function",
-    "name": "REVEAL_WINDOW_BLOCKS",
+    "name": "MIN_REVEAL_WINDOW_BLOCKS",
     "inputs": [],
     "outputs": [
       {
@@ -242,6 +242,19 @@ export const DICE_BATTLE_ABI = [
   },
   {
     "type": "function",
+    "name": "revealWindowBlocks",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "rooms",
     "inputs": [
       {
@@ -295,6 +308,19 @@ export const DICE_BATTLE_ABI = [
     "inputs": [
       {
         "name": "newBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRevealWindow",
+    "inputs": [
+      {
+        "name": "blocks",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -398,6 +424,19 @@ export const DICE_BATTLE_ABI = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RevealWindowUpdated",
+    "inputs": [
+      {
+        "name": "newBlocks",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -720,6 +759,11 @@ export const DICE_BATTLE_ABI = [
   {
     "type": "error",
     "name": "TokenNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WindowTooShort",
     "inputs": []
   },
   {

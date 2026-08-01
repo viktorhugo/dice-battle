@@ -33,7 +33,6 @@ import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
 
 const CELO_SECS_PER_BLOCK = 5;
-const REVEAL_WINDOW_BLOCKS = 200n; // matches DiceBattle.sol REVEAL_WINDOW_BLOCKS constant
 
 type Room = {
   playerA: `0x${string}`;
@@ -211,6 +210,14 @@ export default function GamePage() {
     query: { enabled: !!room?.token },
   });
 
+  const { data: revealWindowBlocks } = useReadContract({
+    address: GAME_ADDRESS,
+    abi: DICE_BATTLE_ABI,
+    functionName: "revealWindowBlocks",
+  });
+  // Fall back to 24 h default while the RPC call is in flight
+  const REVEAL_WINDOW = revealWindowBlocks ?? 17_280n;
+
   const tokenSymbol = room ? getTokenSymbol(room.token) : "";
   const tokenIcon   = room ? getTokenIcon(room.token) : "";
   const ZERO_ADDR   = "0x0000000000000000000000000000000000000000";
@@ -225,7 +232,7 @@ export default function GamePage() {
 
   // How many blocks until the claim window opens (negative = already expired)
   const blocksUntilExpiry = room && currentBlock > 0n
-    ? Number(room.matchedAtBlock + REVEAL_WINDOW_BLOCKS - currentBlock)
+    ? Number(room.matchedAtBlock + REVEAL_WINDOW - currentBlock)
     : null;
   const canClaim = blocksUntilExpiry !== null && blocksUntilExpiry <= 0;
 
