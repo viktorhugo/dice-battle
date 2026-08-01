@@ -246,7 +246,7 @@ contract DiceBattleTest is Test {
         game.joinRoom(roomId);
 
         // Advance past the reveal window
-        vm.roll(block.number + 201);
+        vm.roll(block.number + game.revealWindowBlocks() + 1);
 
         uint256 balBefore = cUsd.balanceOf(bob);
         vm.prank(bob);
@@ -293,6 +293,25 @@ contract DiceBattleTest is Test {
         vm.prank(owner);
         vm.expectRevert(DiceBattle.FeeTooHigh.selector);
         game.setFeeBps(501);
+    }
+
+    function test_setRevealWindow_ownerCanUpdate() public {
+        uint256 newWindow = 34_560; // 48 h
+        vm.prank(owner);
+        game.setRevealWindow(newWindow);
+        assertEq(game.revealWindowBlocks(), newWindow);
+    }
+
+    function test_setRevealWindow_revertsIfTooShort() public {
+        vm.prank(owner);
+        vm.expectRevert(DiceBattle.WindowTooShort.selector);
+        game.setRevealWindow(199);
+    }
+
+    function test_setRevealWindow_revertsIfNotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        game.setRevealWindow(17_280);
     }
 
     function test_withdrawFees_onlyOwner() public {

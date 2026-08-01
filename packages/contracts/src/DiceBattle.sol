@@ -57,8 +57,12 @@ contract DiceBattle is ReentrancyGuard, Ownable {
     /// @notice Absolute ceiling on the fee to protect users from governance abuse.
     uint256 public constant MAX_FEE_BPS = 500; // 5%
 
+    /// @notice Floor for the reveal window — prevents accidental short windows.
+    uint256 public constant MIN_REVEAL_WINDOW_BLOCKS = 200;
+
     /// @notice Window in blocks Player A has to reveal before B can claim the pot.
-    uint256 public constant REVEAL_WINDOW_BLOCKS = 200;
+    /// @dev Default = 17 280 blocks ≈ 24 h at Celo's 5 s/block cadence.
+    uint256 public revealWindowBlocks = 17_280;
 
     /// @notice Whitelist of tokens accepted for bets.
     mapping(address => bool) public allowedTokens;
@@ -100,6 +104,7 @@ contract DiceBattle is ReentrancyGuard, Ownable {
     event TokenWhitelisted(address indexed token, bool allowed);
     event FeeUpdated(uint256 newBps);
     event FeesWithdrawn(address indexed token, uint256 amount);
+    event RevealWindowUpdated(uint256 newBlocks);
 
     // =============================================================
     //                          ERRORS
@@ -116,6 +121,7 @@ contract DiceBattle is ReentrancyGuard, Ownable {
     error RevealWindowActive();
     error FeeTooHigh();
     error ZeroAmount();
+    error WindowTooShort();
 
     // =============================================================
     //                       CONSTRUCTOR
@@ -219,7 +225,7 @@ contract DiceBattle is ReentrancyGuard, Ownable {
         Room storage room = rooms[roomId];
         if (room.state != RoomState.Matched) revert RoomNotMatched();
         if (msg.sender != room.playerB) revert NotPlayerB();
-        if (block.number < room.matchedAtBlock + REVEAL_WINDOW_BLOCKS) {
+        if (block.number < room.matchedAtBlock + revealWindowBlocks) {
             revert RevealWindowActive();
         }
 
@@ -297,6 +303,12 @@ contract DiceBattle is ReentrancyGuard, Ownable {
         if (newBps > MAX_FEE_BPS) revert FeeTooHigh();
         feeBps = newBps;
         emit FeeUpdated(newBps);
+    }
+
+    function setRevealWindow(uint256 blocks) external onlyOwner {
+        if (blocks < MIN_REVEAL_WINDOW_BLOCKS) revert WindowTooShort();
+        revealWindowBlocks = blocks;
+        emit RevealWindowUpdated(blocks);
     }
 
     function withdrawFees(address token, address to) external onlyOwner {
