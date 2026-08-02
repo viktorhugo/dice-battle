@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import dynamic from "next/dynamic";
 import "./globals.css";
 import ContextProvider from "./context/wagmi-provider";
 import { Inter, Space_Grotesk } from "next/font/google";
@@ -7,21 +8,24 @@ import { cn } from "@/lib/utils";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppFooter } from "@/components/AppFooter";
-import { NotInMiniPayBanner } from "@/components/NotInMiniPayBanner";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+// Deferred after first paint — accesses wagmi/window so SSR is intentionally off
+const NotInMiniPayBanner = dynamic(
+  () => import("@/components/NotInMiniPayBanner").then((m) => ({ default: m.NotInMiniPayBanner })),
+  { ssr: false }
+);
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-heading',
-  weight: ['500', '600', '700'],
+  subsets: ["latin"],
+  variable: "--font-heading",
+  weight: ["500", "600", "700"],
+  display: "swap",
 });
 
 function getBaseUrl(): URL {
-  // 1. Explicit canonical URL (set in Vercel env vars for custom domains)
   if (process.env.NEXT_PUBLIC_URL) return new URL(process.env.NEXT_PUBLIC_URL);
-  // 2. Auto-injected by Vercel for every deployment (preview + production)
   if (process.env.VERCEL_URL) return new URL(`https://${process.env.VERCEL_URL}`);
-  // 3. Local dev fallback
   return new URL("http://localhost:3000");
 }
 
@@ -32,7 +36,7 @@ export const metadata: Metadata = {
   title: "Dice Battle 🎲",
   description: APP_DESCRIPTION,
   icons: {
-    icon: [{ url: "/images/favicon.webp", type: "image/png" }],
+    icon: [{ url: "/images/favicon.webp", type: "image/webp" }],
     apple: "/images/favicon.webp",
     shortcut: "/images/favicon.webp",
   },
@@ -68,10 +72,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ContextProvider cookies={cookies}>
           <NextIntlClientProvider locale={locale} messages={messages}>
             <main className="min-h-screen mx-auto max-w-md px-4 py-6">
-                <NotInMiniPayBanner />
-                {children}
-                <AppFooter />
-              </main>
+              <NotInMiniPayBanner />
+              {children}
+              <AppFooter />
+            </main>
           </NextIntlClientProvider>
         </ContextProvider>
       </body>
