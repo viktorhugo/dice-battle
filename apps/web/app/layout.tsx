@@ -9,7 +9,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppFooter } from "@/components/AppFooter";
 
-// Deferred after first paint — accesses wagmi/window so SSR is intentionally off
+// Overlay fijo — no afecta el flujo del documento (sin CLS), carga después del paint
 const NotInMiniPayBanner = dynamic(
   () => import("@/components/NotInMiniPayBanner").then((m) => ({ default: m.NotInMiniPayBanner })),
   { ssr: false }
@@ -71,8 +71,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body suppressHydrationWarning>
         <ContextProvider cookies={cookies}>
           <NextIntlClientProvider locale={locale} messages={messages}>
+            {/* Overlay fuera del flujo — no causa CLS */}
+            <NotInMiniPayBanner />
             <main className="min-h-screen mx-auto max-w-md px-4 py-6">
-              <NotInMiniPayBanner />
               {children}
               <AppFooter />
             </main>

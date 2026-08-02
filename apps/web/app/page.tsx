@@ -1,21 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 import { Medal, Search, Zap, ShieldCheck, Blocks, BanknoteArrowUp, Globe, BarChart2, Trophy } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
+import { QuickMatchButton } from "@/components/QuickMatchButton";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Defer wagmi-dependent components so they don't block the hero image LCP
-const WalletBar = dynamic(
-  () => import("@/components/WalletBar").then((m) => ({ default: m.WalletBar })),
-  { ssr: false, loading: () => <div className="h-10" /> }
-);
-const QuickMatchButton = dynamic(
-  () => import("@/components/QuickMatchButton").then((m) => ({ default: m.QuickMatchButton })),
-  { ssr: false, loading: () => <div className="h-[72px] rounded-2xl border-2 border-white/10 bg-white/5" /> }
-);
 
 export default async function Home() {
   const home = await getTranslations("home");
