@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function Home() {
   const home = await getTranslations("home");
-  const common = await getTranslations("common");
 
   const TRUST_BADGES = [
     { label: home("trust_provably_fair"),   Icon: ShieldCheck,      accent: "#00C4B3" },
@@ -206,10 +205,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="pt-2 text-center font-mono text-[10px] text-white/20">
-        {common("footer")}
-      </footer>
     </div>
   );
 }

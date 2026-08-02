@@ -6,6 +6,8 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { AppFooter } from "@/components/AppFooter";
+import { NotInMiniPayBanner } from "@/components/NotInMiniPayBanner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const spaceGrotesk = Space_Grotesk({
@@ -65,7 +67,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body suppressHydrationWarning>
         <ContextProvider cookies={cookies}>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <main className="min-h-screen mx-auto max-w-md px-4 py-6">{children}</main>
+            <main className="min-h-screen mx-auto max-w-md px-4 py-6">
+                <NotInMiniPayBanner />
+                {children}
+                <AppFooter />
+              </main>
           </NextIntlClientProvider>
         </ContextProvider>
       </body>
