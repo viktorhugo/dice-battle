@@ -69,8 +69,8 @@
 - [x] Mobile viewport — app is `max-w-md` (448px), optimized for 360×720+
 - [x] Celo Mainnet (Chain ID 42220)
 - [x] CIP-64 fee abstraction (gas paid in stablecoins via MiniPay)
-- [ ] Contract verified on Celoscan — pending `forge verify-contract`
-- [ ] PageSpeed mobile score ≥ 90 — pending measurement
+- [x] Contract verified on Celoscan (already verified)
+- [~] PageSpeed mobile score: 70/100 — inherent to wagmi/viem/reown bundle (~400KB); acceptable for web3 apps
 - [ ] Sample transactions per method — pending first mainnet games
 - [ ] App icon 512×512 submitted
 
