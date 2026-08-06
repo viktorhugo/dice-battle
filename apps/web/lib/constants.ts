@@ -76,6 +76,11 @@ export const CHAIN_ID = NETWORK === "celo" ? 42_220 : 11_142_220;
 // Set to true to show block/minute countdown timers in the game UI.
 export const SHOW_BLOCK_COUNTDOWN = false;
 
+export const celoscanTx = (hash: string) =>
+  NETWORK === "celo"
+    ? `https://celoscan.io/tx/${hash}`
+    : `https://celo-sepolia.blockscout.com/tx/${hash}`;
+
 export const TOURNAMENT_ABI = [
   // ── Nickname registry ──────────────────────────────────────
   {

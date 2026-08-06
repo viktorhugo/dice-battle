@@ -51,6 +51,7 @@ export default function JoinRoomPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [joinStep, setJoinStep] = useState<"idle" | "approving" | "joining">("idle");
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [error, setError] = useErrorToast();
   const [showBackup, setShowBackup] = useState(false);
@@ -239,6 +240,7 @@ export default function JoinRoomPage() {
 
       if (allowance < room.stake) {
         logger.log("[onJoin] Allowance insuficiente — enviando approve...");
+        setJoinStep("approving");
         const approveHash = await writeContractAsync({
           address: room.token,
           abi: ERC20_ABI,
@@ -257,6 +259,7 @@ export default function JoinRoomPage() {
 
       // 2. Join room
       logger.log("[onJoin] [2/2] Enviando joinRoom al contrato...");
+      setJoinStep("joining");
       const joinHash = await writeContractAsync({
         address: GAME_ADDRESS,
         abi: DICE_BATTLE_ABI,
@@ -287,6 +290,7 @@ export default function JoinRoomPage() {
       setError(e);
     } finally {
       setBusy(false);
+      setJoinStep("idle");
     }
   }
 
@@ -561,7 +565,7 @@ export default function JoinRoomPage() {
             }`}
           >
             {busy
-              ? <><Spinner /> {join("joining")}</>
+              ? <><Spinner /> {joinStep === "approving" ? join("approving", { token: tokenSymbol }) : join("joining")}</>
               : hasInsufficientBalance
                 ? join("insufficient_token", { token: tokenSymbol })
                 : join("match_stake", { amount: tokenDecimals != null ? formatUnits(room.stake, tokenDecimals) : "…", symbol: tokenSymbol })}

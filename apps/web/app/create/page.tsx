@@ -10,7 +10,7 @@ import { WalletBar } from "@/components/WalletBar";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { computeCommitment, generateSecret, storeSecret } from "@/lib/commitment";
-import { ERC20_ABI, GAME_ADDRESS, getTokenAddress, TOKEN_KEYS, TokenKey } from "@/lib/constants";
+import { celoscanTx, ERC20_ABI, GAME_ADDRESS, getTokenAddress, TOKEN_KEYS, TokenKey } from "@/lib/constants";
 import { getTokenIcon } from "@/lib/utils";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
@@ -56,6 +56,7 @@ export default function CreateRoomPage() {
   const [stake, setStake] = useState("1");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "approving" | "creating" | "done">("idle");
+  const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useErrorToast();
   const [pendingRoom, setPendingRoom] = useState<{ roomId: string; secret: `0x${string}` } | null>(null);
   const tokenAddress = getTokenAddress(token);
@@ -193,6 +194,7 @@ export default function CreateRoomPage() {
         functionName: "createRoom",
         args: [tokenAddress, stakeWei, commitment],
       });
+      setTxHash(createHash);
       logger.log("[onCreate] Tx createRoom enviada:", createHash);
       const receipt = await publicClient.waitForTransactionReceipt({ hash: createHash });
       logger.log("[onCreate] Tx confirmada en bloque:", receipt.blockNumber.toString(), "| status:", receipt.status, "| logs:", receipt.logs.length);
@@ -427,6 +429,17 @@ export default function CreateRoomPage() {
           </button>
         );
       })()}
+
+      {step === "done" && txHash && (
+        <a
+          href={celoscanTx(txHash)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-center text-xs text-white/30 hover:text-white/60 transition-colors underline-offset-2 hover:underline"
+        >
+          {create("view_tx")}
+        </a>
+      )}
     </div>
   );
 }

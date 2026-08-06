@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DicePair } from "@/components/game/DiceAnimation";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { loadSecret, clearSecret, storeSecret } from "@/lib/commitment";
-import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, SHOW_BLOCK_COUNTDOWN } from "@/lib/constants";
+import { celoscanTx, ERC20_ABI, GAME_ADDRESS, ROOM_STATE, SHOW_BLOCK_COUNTDOWN } from "@/lib/constants";
 import {
   getPlayerMiniStats,
   getHeadToHead,
@@ -67,6 +67,7 @@ export default function GamePage() {
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
   const [manualSecret, setManualSecret] = useState("");
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [error, setError] = useErrorToast();
   const fireFireworks = useFireworks();
   const fallAshes = useAshes();
@@ -260,6 +261,7 @@ export default function GamePage() {
         functionName: "reveal",
         args: [BigInt(params.roomId), secret as Hex],
       });
+      setLastTxHash(hash);
       await publicClient.waitForTransactionReceipt({ hash });
       clearSecret(params.roomId);
       await refresh();
@@ -281,6 +283,7 @@ export default function GamePage() {
         functionName: "claimExpired",
         args: [BigInt(params.roomId)],
       });
+      setLastTxHash(hash);
       await publicClient.waitForTransactionReceipt({ hash });
       await refresh();
     } catch (e) {
@@ -450,6 +453,16 @@ export default function GamePage() {
               <p className="font-heading text-xl font-bold text-white/70">{game("claimed_expired")}</p>
               <p className="mt-1 text-xs text-white/40">{game("host_no_reveal")}</p>
             </>
+          )}
+          {lastTxHash && (
+            <a
+              href={celoscanTx(lastTxHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block text-center text-[10px] text-white/25 hover:text-white/50 transition-colors"
+            >
+              {game("view_tx")}
+            </a>
           )}
         </section>
       )}
