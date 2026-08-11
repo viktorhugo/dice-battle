@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import dynamic from "next/dynamic";
 import "./globals.css";
 import ContextProvider from "./context/wagmi-provider";
 import { Inter, Space_Grotesk } from "next/font/google";
@@ -8,12 +7,7 @@ import { cn } from "@/lib/utils";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { AppFooter } from "@/components/AppFooter";
-
-// Overlay fijo — no afecta el flujo del documento (sin CLS), carga después del paint
-const NotInMiniPayBanner = dynamic(
-  () => import("@/components/NotInMiniPayBanner").then((m) => ({ default: m.NotInMiniPayBanner })),
-  { ssr: false }
-);
+import { NotInMiniPayBannerLazy } from "@/components/NotInMiniPayBannerLazy";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const spaceGrotesk = Space_Grotesk({
@@ -72,7 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ContextProvider cookies={cookies}>
           <NextIntlClientProvider locale={locale} messages={messages}>
             {/* Overlay fuera del flujo — no causa CLS */}
-            <NotInMiniPayBanner />
+            <NotInMiniPayBannerLazy />
             <main className="min-h-screen mx-auto max-w-md px-4 py-6">
               {children}
               <AppFooter />
