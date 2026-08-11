@@ -119,7 +119,7 @@
     "you_created": "Creaste esta sala. Comparte el enlace para desafiar a tu oponente.",
     "waiting_join": "Esperando que alguien entre…",
     "redirecting": "Redirigiendo al inicio…",
-    "copy_invite": "Copiar enlace de invitación",
+    "share_room": "Compartir sala",
     "approving": "Autorizando {token}…",
     "cancelling": "Recuperando tu apuesta…",
     "cancel_room": "Cancelar sala — recuperar apuesta",
@@ -232,6 +232,13 @@
     "confirmation": "Guardé mi secreto en un lugar seguro. Entiendo que sin él no puedo revelar y podría perder mi apuesta.",
     "got_it": "Entendido — iniciar el juego",
     "copy_confirm": "Copia y confirma arriba para continuar"
+  },
+  "share": {
+    "title": "Comparte tu sala",
+    "description": "Envía el enlace a tu rival — el que lo abra puede unirse.",
+    "copy_link": "Copiar enlace",
+    "copied": "✓ Copiado",
+    "invite_message": "¡Te reto a Dice Battle! Iguala mi apuesta y juguemos 🎲"
   },
   "nicknameModal": {
     "title": "Pon tu apodo",

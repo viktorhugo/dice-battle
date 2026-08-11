@@ -119,7 +119,7 @@
     "you_created": "You created this room. Share the link to challenge your opponent.",
     "waiting_join": "Waiting for someone to join…",
     "redirecting": "Redirecting to home…",
-    "copy_invite": "Copy invite link",
+    "share_room": "Share room",
     "approving": "Approving {token}…",
     "cancelling": "Recovering your stake…",
     "cancel_room": "Cancel room — recover stake",
@@ -232,6 +232,13 @@
     "confirmation": "I have saved my secret in a safe place. I understand that without it I cannot reveal and may lose my stake.",
     "got_it": "Got it — start the game",
     "copy_confirm": "Copy and confirm above to continue"
+  },
+  "share": {
+    "title": "Share your room",
+    "description": "Send the link to your opponent — whoever opens it can join.",
+    "copy_link": "Copy link",
+    "copied": "✓ Copied",
+    "invite_message": "I challenge you to Dice Battle! Match my stake and let's play 🎲"
   },
   "nicknameModal": {
     "title": "Set your nickname",

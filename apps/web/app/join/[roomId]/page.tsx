@@ -23,9 +23,10 @@ import { useDisplayName } from "@/hooks/useDisplayName";
 import { logger } from "@/lib/logger";
 import { Spinner } from "@/components/ui/spinner";
 import { LightRays } from "@/components/ui/light-rays";
-import { ArrowBigLeftDash, CircleSlash } from "lucide-react";
+import { ArrowBigLeftDash, CircleSlash, Share2 } from "lucide-react";
 import { FloatingToast } from "@/components/ui/floating-toast";
 import { SecretBackupModal, hasSeenBackup } from "@/components/game/SecretBackupModal";
+import { ShareRoomModal } from "@/components/game/ShareRoomModal";
 import { loadSecret } from "@/lib/commitment";
 import { storeJoinedRoom } from "@/lib/joinedRooms";
 import { useTranslations } from "next-intl";
@@ -55,6 +56,7 @@ export default function JoinRoomPage() {
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [error, setError] = useErrorToast();
   const [showBackup, setShowBackup] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hostDisplayName = useDisplayName(room?.playerA);
@@ -389,6 +391,14 @@ export default function JoinRoomPage() {
     <div className="flex flex-col gap-5">
       <WalletBar />
 
+      {showShare && (
+        <ShareRoomModal
+          url={typeof window !== "undefined" ? window.location.href : ""}
+          open={showShare}
+          onOpenChange={setShowShare}
+        />
+      )}
+
       <header className="flex items-center justify-between pt-2">
         <Link href="/rooms" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
           <ArrowBigLeftDash /> {common("back")}
@@ -508,10 +518,10 @@ export default function JoinRoomPage() {
             <>
               <button
                 type="button"
-                onClick={() => navigator.clipboard?.writeText(window.location.href)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 active:opacity-70 transition-opacity"
+                onClick={() => setShowShare(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800/50 py-2.5 text-xs font-medium text-zinc-300 active:opacity-70 transition-opacity"
               >
-                {join("copy_invite")}
+                <Share2 className="h-3.5 w-3.5" /> {join("share_room")}
               </button>
               <button
                 type="button"
