@@ -2,7 +2,6 @@
 
 ## Epic 2 — UX/UI (menor → mayor)
 
-- [ ] #14 — Share Room: QR code + deeplinks WhatsApp/Telegram
 - [ ] #10 — Design system: tokens de color/tipografía consistentes
 - [ ] #13 — Player profile: avatar determinístico + stats
 - [ ] #11 — Hero redesign con animación
@@ -23,3 +22,4 @@
 - [x] PageSpeed — aceptado 70/100 (límite inherente del stack wagmi/viem/reown)
 - [x] #16 — Cultural stake presets (Tinto / Cerveza / Almuerzo / Asado)
 - [x] #15 — Copy narrativo en transacciones + links Celoscan
+- [x] #14 — Share Room: QR code + deeplinks WhatsApp/Telegram
