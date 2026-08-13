@@ -35,16 +35,17 @@ export default async function Home() {
         {/* Glow amarillo detrás dado izquierdo */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-[5%] top-[20%] h-44 w-44 rounded-full bg-celo-yellow blur-3xl opacity-30"
+          className="pointer-events-none absolute left-[5%] top-[20%] h-44 w-44 rounded-full bg-celo-yellow blur-3xl opacity-30 animate-pulse-glow"
         />
         {/* Glow cyan detrás dado derecho */}
         <div
           aria-hidden
-          className="pointer-events-none absolute right-[5%] top-[20%] h-44 w-44 rounded-full bg-minipay-teal blur-3xl opacity-25"
+          className="pointer-events-none absolute right-[5%] top-[20%] h-44 w-44 rounded-full bg-minipay-teal blur-3xl opacity-25 animate-pulse-glow"
+          style={{ animationDelay: "1.5s" }}
         />
 
         {/* Hero image */}
-        <div className="relative z-10 w-full">
+        <div className="relative z-10 w-full animate-dice-float">
           <Image
             src="/images/dices.webp"
             alt="Dice Battle — dados enfrentados"
@@ -53,10 +54,6 @@ export default async function Home() {
             priority
             sizes="(max-width: 448px) 100vw, 448px"
             className="mx-auto w-full object-contain mix-blend-screen"
-            style={{
-              // maskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
-              // WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 50%, black 35%, transparent 100%)",
-            }}
           />
         </div>
 

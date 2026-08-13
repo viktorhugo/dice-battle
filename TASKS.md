@@ -2,7 +2,6 @@
 
 ## Epic 2 — UX/UI (menor → mayor)
 
-- [ ] #11 — Hero redesign con animación
 - [ ] #12 — Dice reveal animation — el momento dramático
 
 ## Acciones externas (solo tú)
@@ -23,3 +22,4 @@
 - [x] #14 — Share Room: QR code + deeplinks WhatsApp/Telegram
 - [x] #10 — Design system: tokens de color consistentes (celo-yellow / minipay-teal / celo-dark centralizados en CSS vars)
 - [x] #13 — Player profile: ya implementado (Identicon determinístico + stats/logros/racha/historial completos)
+- [x] #11 — Hero redesign: flotación + glows pulsantes conectados a keyframes ya existentes en globals.css
