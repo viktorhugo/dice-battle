@@ -27,6 +27,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { logger } from "@/lib/logger";
 import { ComicText } from '../../components/ui/comic-text';
 import { WordRotate } from "@/components/ui/word-rotate";
+import { CELO_YELLOW, MINIPAY_TEAL } from "@/lib/theme";
 import { useTranslations } from "next-intl";
 
 const PAGE_SIZE = 10;
@@ -140,8 +141,8 @@ function RoomCard({
     <li className="flex flex-col gap-1.5">
       {isMatched ? (
         <div className="relative overflow-hidden rounded-2xl p-[2px]">
-          <BorderBeam colorFrom={isGuest ? "#00C4B3" : "#FCFF52"} colorTo={isGuest ? "#FCFF52" : "#00C4B3"} duration={3} size={80} height={10} />
-          <BorderBeam colorFrom={isGuest ? "#FCFF52" : "#00C4B3"} colorTo={isGuest ? "#00C4B3" : "#FCFF52"} duration={3} size={80} height={10} reverse initialOffset={50} />
+          <BorderBeam colorFrom={isGuest ? MINIPAY_TEAL : CELO_YELLOW} colorTo={isGuest ? CELO_YELLOW : MINIPAY_TEAL} duration={3} size={80} height={10} />
+          <BorderBeam colorFrom={isGuest ? CELO_YELLOW : MINIPAY_TEAL} colorTo={isGuest ? MINIPAY_TEAL : CELO_YELLOW} duration={3} size={80} height={10} reverse initialOffset={50} />
           <Link href={`/game/${room.id}`} className="relative flex items-center justify-between overflow-hidden rounded-[14px] bg-zinc-900/90 px-4 py-3.5 backdrop-blur-md transition-all duration-200 active:opacity-70">
             {cardContent}
           </Link>
@@ -604,12 +605,11 @@ export default function RoomsPage() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#0C0C0C] via-[#0C0C0C]/90 to-transparent px-4 pb-6 pt-10">
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-celo-dark via-celo-dark/90 to-transparent px-4 pb-6 pt-10">
         <div className="mx-auto w-full max-w-md">
           <Link
             href="/create"
-            className="group relative overflow-hidden flex items-center justify-center gap-2 w-full rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] animate-btn-glow"
-            style={{ background: "#FCFF52" }}
+            className="group relative overflow-hidden flex items-center justify-center gap-2 w-full rounded-2xl bg-celo-yellow py-[18px] font-heading text-[15px] font-semibold text-celo-dark transition-transform duration-150 active:scale-[0.97] animate-btn-glow"
           >
             <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
             <span className="relative z-10 flex items-center gap-2">

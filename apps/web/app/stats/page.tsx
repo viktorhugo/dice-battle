@@ -31,8 +31,8 @@ const STAT_ROWS: Array<{ key: StatKey; color: string }> = [
   { key: "totalFinished", color: "text-white" },
   { key: "resolved",      color: "text-green-400" },
   { key: "tied",          color: "text-yellow-400" },
-  { key: "open",          color: "text-[#00C4B3]" },
-  { key: "matched",       color: "text-[#FCFF52]" },
+  { key: "open",          color: "text-minipay-teal" },
+  { key: "matched",       color: "text-celo-yellow" },
   { key: "expired",       color: "text-red-400" },
 ];
 
@@ -121,12 +121,11 @@ export default function StatsPage() {
       </header>
 
       {/* ── TVL / Portfolio badge ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-[#FCFF52]/20 bg-gradient-to-br from-[#FCFF52]/8 to-[#00C4B3]/5 p-4 backdrop-blur-sm">
+      <div className="relative overflow-hidden rounded-2xl border border-celo-yellow/20 bg-gradient-to-br from-celo-yellow/8 to-minipay-teal/5 p-4 backdrop-blur-sm">
         {/* Ambient glow */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full blur-3xl opacity-20"
-          style={{ background: "#FCFF52" }}
+          className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-celo-yellow blur-3xl opacity-20"
         />
         <div className="relative flex items-center justify-between">
           <div className="flex flex-col gap-0.5">
@@ -142,7 +141,7 @@ export default function StatsPage() {
               <Skeleton className="h-7 w-20" />
             ) : (
               <>
-                <span className="font-mono text-2xl font-bold tabular-nums" style={{ color: "#FCFF52" }}>
+                <span className="font-mono text-2xl font-bold tabular-nums text-celo-yellow">
                   ${tvl.toFixed(2)}
                 </span>
                 <span className="flex items-center gap-1 text-[10px] text-white/30 font-mono">
@@ -223,11 +222,8 @@ export default function StatsPage() {
             {/* CELO native */}
             {celoBalance !== null && (
               <div className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-2 py-2.5">
-                <div
-                  className="flex h-5 w-5 items-center justify-center rounded-full"
-                  style={{ background: "rgba(252,255,82,0.15)" }}
-                >
-                  <span className="text-[9px] font-bold" style={{ color: "#FCFF52" }}>C</span>
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-celo-yellow/15">
+                  <span className="text-[9px] font-bold text-celo-yellow">C</span>
                 </div>
                 <span className="font-mono text-sm font-bold tabular-nums text-white">
                   {parseFloat(formatUnits(celoBalance, 18)).toFixed(4)}

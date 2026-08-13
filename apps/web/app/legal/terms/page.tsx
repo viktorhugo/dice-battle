@@ -121,7 +121,7 @@ export default function TermsPage() {
             href="https://t.me/dicebattle_support"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#FCFF52] hover:underline"
+            className="text-celo-yellow hover:underline"
           >
             t.me/dicebattle_support
           </a>

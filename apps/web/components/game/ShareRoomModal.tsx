@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Link as LinkIcon, MessageCircle, Send } from "lucide-react";
+import { CELO_DARK } from "@/lib/theme";
 
 interface Props {
   url: string;
@@ -50,7 +51,7 @@ export function ShareRoomModal({ url, open, onOpenChange }: Props) {
 
         {/* QR code */}
         <div className="flex justify-center rounded-xl bg-white p-4">
-          <QRCodeSVG value={url} size={160} bgColor="#ffffff" fgColor="#0C0C0C" level="M" />
+          <QRCodeSVG value={url} size={160} bgColor="#ffffff" fgColor={CELO_DARK} level="M" />
         </div>
 
         {/* Deeplinks */}

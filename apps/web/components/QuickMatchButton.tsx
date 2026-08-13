@@ -38,12 +38,11 @@ export function QuickMatchButton() {
       type="button"
       onClick={handleClick}
       disabled={isSearching}
-      className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 py-[18px] text-center transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
-      style={{
-        borderColor: isNone ? "rgba(239,68,68,0.4)" : "#00C4B3",
-        background: isNone ? "rgba(239,68,68,0.08)" : "rgba(0,196,179,0.1)",
-        color: isNone ? "#f87171" : "#00C4B3",
-      }}
+      className={`col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 py-[18px] text-center transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60 ${
+        isNone
+          ? "border-red-500/40 bg-red-500/8 text-red-400"
+          : "border-minipay-teal bg-minipay-teal/10 text-minipay-teal"
+      }`}
     >
       <span className="relative z-10 flex items-center justify-center gap-2 font-heading text-[15px] font-semibold">
         {isSearching ? (

@@ -7,22 +7,23 @@ import { WalletBar } from "@/components/WalletBar";
 import { LiveStats } from "@/components/social/LiveStats";
 import { QuickMatchButton } from "@/components/QuickMatchButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CELO_YELLOW, MINIPAY_TEAL } from "@/lib/theme";
 
 export default async function Home() {
   const home = await getTranslations("home");
 
   const TRUST_BADGES = [
-    { label: home("trust_provably_fair"),   Icon: ShieldCheck,      accent: "#00C4B3" },
-    { label: home("trust_fully_onchain"),   Icon: Blocks,           accent: "#FCFF52" },
-    { label: home("trust_instant_payouts"), Icon: BanknoteArrowUp,  accent: "#00C4B3" },
-    { label: home("trust_built_on_celo"),   Icon: Globe,            accent: "#FCFF52" },
+    { label: home("trust_provably_fair"),   Icon: ShieldCheck,      accent: MINIPAY_TEAL },
+    { label: home("trust_fully_onchain"),   Icon: Blocks,           accent: CELO_YELLOW },
+    { label: home("trust_instant_payouts"), Icon: BanknoteArrowUp,  accent: MINIPAY_TEAL },
+    { label: home("trust_built_on_celo"),   Icon: Globe,            accent: CELO_YELLOW },
   ];
 
   const HOW_IT_WORKS = [
-    { n: "01", title: home("step_01_title"), desc: home("step_01_desc"), accent: "#FCFF52" },
-    { n: "02", title: home("step_02_title"), desc: home("step_02_desc"), accent: "#00C4B3" },
-    { n: "03", title: home("step_03_title"), desc: home("step_03_desc"), accent: "#FCFF52" },
-    { n: "04", title: home("step_04_title"), desc: home("step_04_desc"), accent: "#00C4B3" },
+    { n: "01", title: home("step_01_title"), desc: home("step_01_desc"), accent: CELO_YELLOW },
+    { n: "02", title: home("step_02_title"), desc: home("step_02_desc"), accent: MINIPAY_TEAL },
+    { n: "03", title: home("step_03_title"), desc: home("step_03_desc"), accent: CELO_YELLOW },
+    { n: "04", title: home("step_04_title"), desc: home("step_04_desc"), accent: MINIPAY_TEAL },
   ];
 
   return (
@@ -34,14 +35,12 @@ export default async function Home() {
         {/* Glow amarillo detrás dado izquierdo */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-[5%] top-[20%] h-44 w-44 rounded-full blur-3xl opacity-30"
-          style={{ background: "#FCFF52" }}
+          className="pointer-events-none absolute left-[5%] top-[20%] h-44 w-44 rounded-full bg-celo-yellow blur-3xl opacity-30"
         />
         {/* Glow cyan detrás dado derecho */}
         <div
           aria-hidden
-          className="pointer-events-none absolute right-[5%] top-[20%] h-44 w-44 rounded-full blur-3xl opacity-25"
-          style={{ background: "#00C4B3" }}
+          className="pointer-events-none absolute right-[5%] top-[20%] h-44 w-44 rounded-full bg-minipay-teal blur-3xl opacity-25"
         />
 
         {/* Hero image */}
@@ -64,7 +63,7 @@ export default async function Home() {
         {/* Title + tagline */}
         <div className="z-10 flex flex-col items-center gap-1 -mt-[50px]">
           <h1 className="font-heading text-[3rem] font-bold leading-none tracking-tight">
-            <span style={{ color: "#FCFF52" }}>Dice</span>
+            <span className="text-celo-yellow">Dice</span>
             <span className="text-white"> Battle</span>
           </h1>
 
@@ -116,8 +115,7 @@ export default async function Home() {
         {/* Primary CTA — full width, glowing */}
         <Link
           href="/create"
-          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl py-[18px] text-center text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] animate-btn-glow"
-          style={{ background: "#FCFF52" }}
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl bg-celo-yellow py-[18px] text-center text-celo-dark transition-transform duration-150 active:scale-[0.97] animate-btn-glow"
         >
           <span className="relative z-10 flex items-center justify-center gap-2 font-heading text-[15px] font-semibold">
             <Zap className="h-5 w-5 fill-current" />
@@ -135,10 +133,10 @@ export default async function Home() {
         {/* Browse Rooms */}
         <Link
           href="/rooms"
-          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#00C4B3]/40"
+          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-minipay-teal/40"
         >
           <span className="flex flex-col items-center gap-2">
-            <Search className="h-5 w-5" style={{ color: "#00C4B3" }} />
+            <Search className="h-5 w-5 text-minipay-teal" />
             <span className="font-heading text-sm font-semibold text-white">{home("browse_rooms")}</span>
           </span>
         </Link>
@@ -146,10 +144,10 @@ export default async function Home() {
         {/* Leaderboard */}
         <Link
           href="/leaderboard"
-          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/40"
+          className="group cursor-pointer overflow-hidden rounded-2xl border-2 border-white/10 bg-white/5 py-5 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-celo-yellow/40"
         >
           <span className="flex flex-col items-center gap-2">
-            <Medal className="h-5 w-5" style={{ color: "#FCFF52" }} />
+            <Medal className="h-5 w-5 text-celo-yellow" />
             <span className="font-heading text-sm font-semibold text-white">{home("leaderboard")}</span>
           </span>
         </Link>
@@ -173,10 +171,10 @@ export default async function Home() {
         {/* Protocol Stats */}
         <Link
           href="/stats"
-          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-[#FCFF52]/20 bg-gradient-to-r from-[#FCFF52]/5 to-[#00C4B3]/5 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-[#FCFF52]/35 hover:from-[#FCFF52]/10 hover:to-[#00C4B3]/10"
+          className="col-span-2 group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-celo-yellow/20 bg-gradient-to-r from-celo-yellow/5 to-minipay-teal/5 py-4 text-center backdrop-blur-sm transition-all duration-200 active:scale-[0.97] hover:border-celo-yellow/35 hover:from-celo-yellow/10 hover:to-minipay-teal/10"
         >
           <span className="flex items-center justify-center gap-2">
-            <BarChart2 className="h-4 w-4 transition-colors" style={{ color: "#FCFF52" }} />
+            <BarChart2 className="h-4 w-4 text-celo-yellow transition-colors" />
             <span className="font-heading text-sm font-semibold text-white/65 transition-colors group-hover:text-white/85">
               {home("protocol_stats")}
             </span>

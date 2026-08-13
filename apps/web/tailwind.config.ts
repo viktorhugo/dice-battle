@@ -8,13 +8,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // App-specific
+        // App-specific brand tokens — source of truth in app/globals.css :root.
+        // <alpha-value> lets Tailwind apply opacity modifiers (e.g. bg-celo-yellow/10).
         celo: {
-          yellow: "#FCFF52",
-          dark: "#0C0C0C",
+          yellow: "rgb(var(--color-celo-yellow-rgb) / <alpha-value>)",
+          dark: "rgb(var(--color-celo-dark-rgb) / <alpha-value>)",
         },
         minipay: {
-          teal: "#00C4B3",
+          teal: "rgb(var(--color-minipay-teal-rgb) / <alpha-value>)",
         },
         // shadcn semantic tokens (CSS variables from globals.css)
         background: "var(--background)",

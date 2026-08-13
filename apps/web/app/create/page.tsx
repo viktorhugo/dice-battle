@@ -410,9 +410,8 @@ export default function CreateRoomPage() {
             className={`group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none ${
               showNeutral
                 ? "border border-red-500/30 bg-red-500/10 text-red-400"
-                : "text-[#0C0C0C] disabled:opacity-40 animate-btn-glow"
+                : "bg-celo-yellow text-celo-dark disabled:opacity-40 animate-btn-glow"
             }`}
-            style={showNeutral ? undefined : { background: "#FCFF52" }}
           >
             <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
             <span className="relative z-10 flex items-center gap-2">

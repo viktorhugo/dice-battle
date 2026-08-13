@@ -340,7 +340,7 @@ export default function GamePage() {
           <ArrowBigLeftDash /> {game("back")}
         </Link>
         <h1 className="font-heading text-base font-semibold tracking-wide">
-          Room <span style={{ color: "#FCFF52" }}>#{params.roomId}</span>
+          Room <span className="text-celo-yellow">#{params.roomId}</span>
         </h1>
         {room.state === ROOM_STATE.MATCHED ? (
           <div className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5">
@@ -365,8 +365,8 @@ export default function GamePage() {
       {/* Dice arena */}
       <section className="relative rounded-2xl border-2 border-white/10 bg-white/5 backdrop-blur-sm px-4 pt-5 pb-5 flex flex-col gap-4">
         {/* Ambient glows */}
-        <div aria-hidden className="pointer-events-none absolute left-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-20" style={{ background: "#FCFF52" }} />
-        <div aria-hidden className="pointer-events-none absolute right-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full blur-3xl opacity-15" style={{ background: "#00C4B3" }} />
+        <div aria-hidden className="pointer-events-none absolute left-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full bg-celo-yellow blur-3xl opacity-20" />
+        <div aria-hidden className="pointer-events-none absolute right-[10%] top-1/2 -translate-y-1/2 h-28 w-28 rounded-full bg-minipay-teal blur-3xl opacity-15" />
 
         {/* Dice + player info */}
         <div className="relative flex items-center justify-center gap-4">
@@ -387,7 +387,7 @@ export default function GamePage() {
                 </span>
               );
             })()}
-            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerA ? "border border-[#FCFF52]/30 bg-[#FCFF52]/10" : "invisible"}`} style={{ color: "#FCFF52" }}>
+            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide text-celo-yellow ${isPlayerA ? "border border-celo-yellow/30 bg-celo-yellow/10" : "invisible"}`}>
               {game("you")}
             </span>
           </div>
@@ -414,7 +414,7 @@ export default function GamePage() {
                 </span>
               );
             })()}
-            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide ${isPlayerB ? "border border-[#00C4B3]/30 bg-[#00C4B3]/10" : "invisible"}`} style={{ color: "#00C4B3" }}>
+            <span className={`rounded-full px-2 py-0.5 font-heading text-[9px] font-semibold tracking-wide text-minipay-teal ${isPlayerB ? "border border-minipay-teal/30 bg-minipay-teal/10" : "invisible"}`}>
               {game("you")}
             </span>
           </div>
@@ -426,7 +426,7 @@ export default function GamePage() {
         <section className="rounded-2xl border-2 border-white/10 bg-white/5 p-5 text-center backdrop-blur-sm">
           {result.kind === "tie" && (
             <>
-              <p className="font-heading text-xl text-white/40 font-bold" style={{ color: "#FCFF52" }}>{game("its_tie")}</p>
+              <p className="font-heading text-xl font-bold text-celo-yellow">{game("its_tie")}</p>
               <p className="mt-1 font-mono text-sm text-white/70">
                 {game("refunded", { amount: formatUnits(room.stake, tokenDecimals ?? 18), token: tokenSymbol })}
               </p>
@@ -488,7 +488,7 @@ export default function GamePage() {
               {tokenIcon && (
                 <Image src={tokenIcon} alt={tokenSymbol} width={20} height={20} className="rounded-full" />
               )}
-              <p className="font-mono text-2xl font-bold" style={{ color: "#FCFF52" }}>
+              <p className="font-mono text-2xl font-bold text-celo-yellow">
                 ~{(Number(formatUnits(room.stake, tokenDecimals)) * 1.96).toFixed(2)}
                 <span className="ml-1.5 text-base font-normal text-white/50">{tokenSymbol}</span>
               </p>
@@ -539,8 +539,7 @@ export default function GamePage() {
                 type="button"
                 disabled={!isConnected || busy}
                 onClick={onReveal}
-                className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold text-[#0C0C0C] transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
-                style={{ background: "#FCFF52" }}
+                className="group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl bg-celo-yellow py-[18px] font-heading text-[15px] font-semibold text-celo-dark transition-transform duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none animate-btn-glow"
               >
                 <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
                 <span className="relative z-10 flex items-center gap-2">
@@ -597,10 +596,9 @@ export default function GamePage() {
                     }}
                     className={`group relative overflow-hidden flex items-center justify-center gap-2 rounded-2xl py-[18px] font-heading text-[15px] font-semibold transition-transform duration-150 active:scale-[0.97] disabled:pointer-events-none ${
                       isValid
-                        ? "text-[#0C0C0C] animate-btn-glow"
+                        ? "bg-celo-yellow text-celo-dark animate-btn-glow"
                         : "border border-white/10 bg-white/5 text-white/25"
                     }`}
-                    style={isValid ? { background: "#FCFF52" } : undefined}
                   >
                     <span aria-hidden className="absolute inset-0 bg-black/0 transition-colors duration-150 group-active:bg-black/10" />
                     <span className="relative z-10 flex items-center gap-2">
@@ -664,8 +662,7 @@ export default function GamePage() {
           </button>
           <Link
             href="/create"
-            className="flex-1 cursor-pointer rounded-2xl py-4 text-center font-heading text-sm font-semibold text-[#0C0C0C] active:opacity-80 animate-btn-glow"
-            style={{ background: "#FCFF52" }}
+            className="flex-1 cursor-pointer rounded-2xl bg-celo-yellow py-4 text-center font-heading text-sm font-semibold text-celo-dark active:opacity-80 animate-btn-glow"
           >
             {game("play_again")}
           </Link>

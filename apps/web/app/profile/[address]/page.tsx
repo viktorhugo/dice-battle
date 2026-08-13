@@ -225,10 +225,10 @@ function StreakCalendar({ days, label }: { days: string[]; label: string }) {
             className={`aspect-square rounded-sm transition-colors ${
               date === todayStr
                 ? daysSet.has(date)
-                  ? "bg-[#FCFF52]"
-                  : "bg-white/8 ring-1 ring-[#FCFF52]/40"
+                  ? "bg-celo-yellow"
+                  : "bg-white/8 ring-1 ring-celo-yellow/40"
                 : daysSet.has(date)
-                ? "bg-[#00C4B3]/60"
+                ? "bg-minipay-teal/60"
                 : "bg-white/8"
             }`}
           />
@@ -387,7 +387,7 @@ export default function ProfilePage() {
             ) : (
               <button
                 onClick={() => setNicknameModalOpen(true)}
-                className="flex items-center gap-1 rounded-full border border-[#FCFF52]/40 bg-[#FCFF52]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#FCFF52] hover:bg-[#FCFF52]/20 transition-all"
+                className="flex items-center gap-1 rounded-full border border-celo-yellow/40 bg-celo-yellow/10 px-2.5 py-0.5 text-[10px] font-semibold text-celo-yellow hover:bg-celo-yellow/20 transition-all"
               >
                 <Plus className="h-3 w-3" /> {profile("add_nickname")}
               </button>
@@ -397,7 +397,7 @@ export default function ProfilePage() {
 
         {/* Celoname subtle */}
         {celoProfile && (
-          <span className="text-xs text-[#00C4B3]/70 font-mono">{celoProfile.fullName}</span>
+          <span className="text-xs text-minipay-teal/70 font-mono">{celoProfile.fullName}</span>
         )}
 
         {/* Address copy */}

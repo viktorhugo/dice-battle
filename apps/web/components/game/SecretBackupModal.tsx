@@ -85,7 +85,7 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
           className={`rounded-xl border py-3 text-sm font-semibold transition-colors active:opacity-70 ${
             copied
               ? "border-green-500/40 bg-green-500/10 text-green-400"
-              : "border-[#FCFF52]/40 bg-[#FCFF52]/10 text-[#FCFF52]"
+              : "border-celo-yellow/40 bg-celo-yellow/10 text-celo-yellow"
           }`}
         >
           {copied ? secretBackup("copied") : secretBackup("copy_secret")}
@@ -109,8 +109,9 @@ export function SecretBackupModal({ roomId, secret, onDismiss }: Props) {
           type="button"
           disabled={!canDismiss}
           onClick={handleDismiss}
-          className="rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          style={{ background: canDismiss ? "#FCFF52" : undefined, color: canDismiss ? "#0C0C0C" : undefined, border: canDismiss ? undefined : "1px solid rgba(255,255,255,0.1)" }}
+          className={`rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-30 disabled:pointer-events-none ${
+            canDismiss ? "bg-celo-yellow text-celo-dark" : "border border-white/10"
+          }`}
         >
           {canDismiss ? secretBackup("got_it") : secretBackup("copy_confirm")}
         </button>

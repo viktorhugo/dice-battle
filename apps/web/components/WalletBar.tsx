@@ -32,11 +32,11 @@ function ConnectButton({
     <button
       type="button"
       onClick={() => open()}
-      className="relative overflow-hidden flex items-center gap-1.5 rounded-[11px] border border-[#FCFF52]/60 bg-[#0C0C0C] px-4 py-2 font-heading text-xs font-bold text-[#FCFF52] "
+      className="relative overflow-hidden flex items-center gap-1.5 rounded-[11px] border border-celo-yellow/60 bg-celo-dark px-4 py-2 font-heading text-xs font-bold text-celo-yellow "
     >
       {/* partículas */}
-      <span aria-hidden className="absolute left-3 top-1 h-[3px] w-[3px] rounded-full bg-[#FCFF52] opacity-70 animate-ping" style={{ animationDelay: "0s", animationDuration: "2s" }} />
-      <span aria-hidden className="absolute bottom-1.5 right-5 h-[3px] w-[3px] rounded-full bg-[#FCFF52] opacity-50 animate-ping" style={{ animationDelay: "0.9s", animationDuration: "2.6s" }} />
+      <span aria-hidden className="absolute left-3 top-1 h-[3px] w-[3px] rounded-full bg-celo-yellow opacity-70 animate-ping" style={{ animationDelay: "0s", animationDuration: "2s" }} />
+      <span aria-hidden className="absolute bottom-1.5 right-5 h-[3px] w-[3px] rounded-full bg-celo-yellow opacity-50 animate-ping" style={{ animationDelay: "0.9s", animationDuration: "2.6s" }} />
       <span aria-hidden className="absolute right-3 top-2 h-[2px] w-[2px] rounded-full bg-white opacity-40 animate-ping" style={{ animationDelay: "1.5s", animationDuration: "1.9s" }} />
 
       <Wallet className="relative z-10 h-3.5 w-3.5 shrink-0" />

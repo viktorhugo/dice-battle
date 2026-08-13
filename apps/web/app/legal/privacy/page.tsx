@@ -44,7 +44,7 @@ export default function PrivacyPage() {
               href="https://goldsky.com/privacy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#FCFF52] hover:underline"
+              className="text-celo-yellow hover:underline"
             >
               goldsky.com/privacy
             </a>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
               href="https://vercel.com/legal/privacy-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#FCFF52] hover:underline"
+              className="text-celo-yellow hover:underline"
             >
               vercel.com/legal/privacy-policy
             </a>
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
             href="https://celoscan.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#FCFF52] hover:underline"
+            className="text-celo-yellow hover:underline"
           >
             celoscan.io
           </a>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
             href="https://t.me/dicebattle_support"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#FCFF52] hover:underline"
+            className="text-celo-yellow hover:underline"
           >
             t.me/dicebattle_support
           </a>

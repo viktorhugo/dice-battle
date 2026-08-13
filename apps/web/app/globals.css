@@ -7,6 +7,12 @@
 :root {
   color-scheme: light dark;
   --muted: rgba(255, 255, 255, 0.10);
+
+  /* Brand tokens — single source of truth, referenced by tailwind.config.ts.
+     RGB channels (space-separated) let Tailwind apply opacity modifiers, e.g. bg-celo-yellow/10. */
+  --color-celo-yellow-rgb: 252 255 82;
+  --color-celo-dark-rgb: 12 12 12;
+  --color-minipay-teal-rgb: 0 196 179;
 }
 
 html,
@@ -15,7 +21,7 @@ body {
 }
 
 body {
-  background: #0C0C0C;
+  background: rgb(var(--color-celo-dark-rgb));
   color: #FFFFFF;
   -webkit-font-smoothing: antialiased;
 }
@@ -41,13 +47,13 @@ body {
 }
 
 @keyframes btnGlow {
-  0%, 100% { box-shadow: 0 0 20px #FCFF5230, 0 4px 16px #FCFF5215; }
-  50%       { box-shadow: 0 0 36px #FCFF5250, 0 4px 24px #FCFF5230; }
+  0%, 100% { box-shadow: 0 0 20px rgb(var(--color-celo-yellow-rgb) / 0.19), 0 4px 16px rgb(var(--color-celo-yellow-rgb) / 0.08); }
+  50%       { box-shadow: 0 0 36px rgb(var(--color-celo-yellow-rgb) / 0.31), 0 4px 24px rgb(var(--color-celo-yellow-rgb) / 0.19); }
 }
 
 @keyframes neonBorderGlow {
-  0%, 100% { box-shadow: 0 0 6px #FCFF5245, 0 0 16px #FCFF5215; }
-  50%       { box-shadow: 0 0 18px #FCFF5275, 0 0 34px #FCFF5235; }
+  0%, 100% { box-shadow: 0 0 6px rgb(var(--color-celo-yellow-rgb) / 0.27), 0 0 16px rgb(var(--color-celo-yellow-rgb) / 0.08); }
+  50%       { box-shadow: 0 0 18px rgb(var(--color-celo-yellow-rgb) / 0.46), 0 0 34px rgb(var(--color-celo-yellow-rgb) / 0.21); }
 }
 
 @keyframes marquee {
@@ -60,7 +66,7 @@ body {
   @keyframes diceFloat       { from, to { transform: none; } }
   @keyframes diceFloatReverse { from, to { transform: none; } }
   @keyframes pulseGlow       { from, to { opacity: 0.25; } }
-  @keyframes btnGlow         { from, to { box-shadow: 0 0 20px #FCFF5230; } }
+  @keyframes btnGlow         { from, to { box-shadow: 0 0 20px rgb(var(--color-celo-yellow-rgb) / 0.19); } }
   @keyframes marquee         { from, to { transform: none; } }
 }
 

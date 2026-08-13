@@ -26,6 +26,7 @@ import { useDisplayName } from "@/hooks/useDisplayName";
 import { useErrorToast } from "@/hooks/useErrorToast";
 import { logger } from "@/lib/logger";
 import { useTranslations } from "next-intl";
+import { celoYellowAlpha } from "@/lib/theme";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -351,7 +352,7 @@ export default function TournamentPage() {
           <ArrowBigLeftDash /> {common("back")}
         </Link>
         <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-[#FCFF52]" />
+          <Trophy className="h-5 w-5 text-celo-yellow" />
           <h1 className="text-lg font-semibold">{tournament("title")}</h1>
         </div>
         <div className="w-10" />
@@ -360,7 +361,7 @@ export default function TournamentPage() {
       {/* Pool + countdown */}
       {hasTournament ? (
         <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-yellow-500/5 px-5 py-5">
-          <LightRays count={4} color="rgba(252, 255, 82, 0.15)" blur={44} speed={18} length="100%" />
+          <LightRays count={4} color={celoYellowAlpha(0.15)} blur={44} speed={18} length="100%" />
           <div className="relative flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
@@ -381,7 +382,7 @@ export default function TournamentPage() {
                 <Clock className="h-3.5 w-3.5 text-white/40" />
                 <p className="text-xs text-white/50">{tournament("ends_saturday")}</p>
               </div>
-              <p className="font-mono text-sm font-semibold text-[#FCFF52]">{countdown}</p>
+              <p className="font-mono text-sm font-semibold text-celo-yellow">{countdown}</p>
             </div>
           </div>
         </div>

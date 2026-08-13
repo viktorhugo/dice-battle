@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SoftBlurText } from "@/components/ui/SoftBlurText";
 import { DICE_BATTLE_ABI } from "@/lib/abi";
 import { ERC20_ABI, GAME_ADDRESS, ROOM_STATE, ROOM_STATE_LABEL } from "@/lib/constants";
+import { celoYellowAlpha } from "@/lib/theme";
 import {
   getPlayerMiniStats,
   getRoomCreatedAt,
@@ -411,7 +412,7 @@ export default function JoinRoomPage() {
       <section className={`relative overflow-hidden rounded-2xl border-2 bg-zinc-900/80 backdrop-blur-md p-5 ${cardBorder}`}>
         <LightRays
           count={5}
-          color="rgba(252, 255, 82, 0.18)"
+          color={celoYellowAlpha(0.18)}
           blur={40}
           speed={16}
           length="100%"

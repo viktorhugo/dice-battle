@@ -20,7 +20,7 @@ export function NotInMiniPayBanner() {
   return (
     <div
       role="banner"
-      className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-[#FCFF52]/20 bg-[#0C0C0C]/95 p-4 shadow-2xl backdrop-blur-md"
+      className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-celo-yellow/20 bg-celo-dark/95 p-4 shadow-2xl backdrop-blur-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
@@ -42,7 +42,7 @@ export function NotInMiniPayBanner() {
               href="https://www.opera.com/es/mini"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 rounded-xl bg-[#FCFF52] px-3 py-2 text-xs font-bold text-[#0C0C0C] text-center hover:bg-[#FCFF52]/90 transition-colors"
+              className="flex-1 rounded-xl bg-celo-yellow px-3 py-2 text-xs font-bold text-celo-dark text-center hover:bg-celo-yellow/90 transition-colors"
             >
               Descargar MiniPay
             </a>
